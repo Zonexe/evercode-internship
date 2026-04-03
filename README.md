@@ -1,1 +1,14 @@
-# evercode-internship
+# Evercode Internship Project
+
+## Структура проекта
+
+- `src/config.js` — конфигурация приложения.
+- `src/logger.js` — модуль логирования.
+- `src/scheduler.js` — модуль планировщика задач.
+- `src/index.js` — точка входа в приложение.
+
+## Как запустить
+
+1. Клонируйте репозиторий.
+2. Установите зависимости (если появятся): `npm install`.
+3. Запустите проект: `node src/index.js`.
