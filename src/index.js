@@ -1,8 +1,14 @@
-const logger = require("./logger");
-const { startTask } = require('./scheduler');
+const config = require("./config");
+const { createLogger } = require("./utils/logger");
+const Scheduler = require("./services/scheduler");
+const { myPeriodicTask } = require("./tasks/myTask");
 
-logger("Приложение успешно запущено!");
+const appLogger = createLogger(config.appName);
 
-startTask('MyPeriodicTask', 10000, () => {
-    logger('running');
-});
+const myScheduler = new Scheduler(appLogger);
+
+appLogger(
+  `Приложение версии ${config.version} успешно запущено на порту ${config.port}!`,
+);
+
+myScheduler.startTask("MyPeriodicTask", 10000, myPeriodicTask);
