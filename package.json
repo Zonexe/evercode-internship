@@ -17,5 +17,10 @@
   "bugs": {
     "url": "https://github.com/Zonexe/evercode-internship/issues"
   },
-  "homepage": "https://github.com/Zonexe/evercode-internship#readme"
+  "homepage": "https://github.com/Zonexe/evercode-internship#readme",
+  "devDependencies": {
+    "@types/node": "^25.8.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^6.0.3"
+  }
 }
