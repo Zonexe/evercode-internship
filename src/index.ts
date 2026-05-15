@@ -1,14 +1,16 @@
-import config from "./config";
-import { ConsoleLogger } from "./utils/logger";
-import Scheduler from "./services/scheduler";
+import container from "./container";
 import { myPeriodicTask } from "./tasks/myTask";
+import { ILogger } from "./utils/logger";
+import Scheduler from "./services/scheduler";
 
-const appLogger = new ConsoleLogger(config.appName);
+const logger = container.resolve<ILogger>("logger");
+const scheduler = container.resolve<Scheduler>("scheduler");
 
-const myScheduler = new Scheduler(appLogger);
+import configType from "./config";
+const config = container.resolve<typeof configType>("config");
 
-appLogger.log(
+logger.log(
   `Приложение версии ${config.version} успешно запущено на порту ${config.port}!`,
 );
 
-myScheduler.startTask("MyPeriodicTask", 10000, myPeriodicTask);
+scheduler.startTask("MyPeriodicTask", 10000, myPeriodicTask);

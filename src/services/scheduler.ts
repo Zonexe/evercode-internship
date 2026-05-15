@@ -1,5 +1,3 @@
-// src/services/scheduler.ts
-
 import { ILogger } from "../utils/logger";
 
 export default class Scheduler {
