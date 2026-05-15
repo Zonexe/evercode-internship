@@ -1,11 +1,14 @@
-export type LoggerType = (message: string) => void;
-export type Transport = (msg: string) => void;
+export interface ILogger {
+  log(message: string): void;
+}
 
-export const createLogger = (
-  prefix: string,
-  transport: Transport = (msg) => console.log(msg),
-): LoggerType => {
-  return (message: string) => {
-    transport(`[${prefix}] - ${message}`);
-  };
-};
+export class ConsoleLogger implements ILogger {
+  constructor(
+    private prefix: string,
+    private transport: (msg: string) => void = (msg) => console.log(msg),
+  ) {}
+
+  log(message: string): void {
+    this.transport(`[${this.prefix}] - ${message}`);
+  }
+}

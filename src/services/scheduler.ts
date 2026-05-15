@@ -1,18 +1,16 @@
-import { LoggerType } from "../utils/logger";
+// src/services/scheduler.ts
+
+import { ILogger } from "../utils/logger";
 
 export default class Scheduler {
-  private logger: LoggerType;
-
-  constructor(logger: LoggerType) {
-    this.logger = logger;
-  }
+  constructor(private logger: ILogger) {}
 
   startTask(
     name: string,
     interval: number,
-    taskFunction: (logger: LoggerType) => void,
+    taskFunction: (logger: ILogger) => void,
   ): void {
-    this.logger(`Task "${name}" started with interval ${interval}ms`);
+    this.logger.log(`Task "${name}" started with interval ${interval}ms`);
 
     setInterval(() => taskFunction(this.logger), interval);
   }
