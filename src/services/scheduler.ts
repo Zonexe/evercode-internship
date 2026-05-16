@@ -2,7 +2,7 @@ import { ILogger } from "../utils/logger";
 import { TaskExecutionError } from "../errors/TaskExecutionError";
 
 export default class Scheduler {
-  constructor(private logger: ILogger) {}
+  constructor(public logger: ILogger) {}
 
   startTask(
     name: string,
