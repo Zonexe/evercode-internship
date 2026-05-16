@@ -10,6 +10,9 @@ export class AppError extends Error {
     context?: Record<string, any>,
   ) {
     super(message);
+
+    Object.setPrototypeOf(this, new.target.prototype);
+
     this.name = this.constructor.name;
     this.statusCode = statusCode;
     this.timestamp = new Date().toISOString();
