@@ -1,11 +1,19 @@
 export class AppError extends Error {
   public readonly name: string;
-  public readonly isOperational: boolean;
+  public readonly statusCode: number;
+  public readonly timestamp: string;
+  public readonly context?: Record<string, any>;
 
-  constructor(message: string, name: string, isOperational = true) {
+  constructor(
+    message: string,
+    statusCode: number = 500,
+    context?: Record<string, any>,
+  ) {
     super(message);
-    this.name = name;
-    this.isOperational = isOperational;
+    this.name = this.constructor.name;
+    this.statusCode = statusCode;
+    this.timestamp = new Date().toISOString();
+    this.context = context;
 
     Error.captureStackTrace(this, this.constructor);
   }
