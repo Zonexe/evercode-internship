@@ -1,6 +1,6 @@
 import { createContainer, asFunction, asValue } from "awilix";
 import { Logger, LogLevel } from "./utils/logger";
-import Scheduler from "./services/scheduler";
+import { Scheduler } from "./services/scheduler";
 import config from "./config";
 
 const container = createContainer();

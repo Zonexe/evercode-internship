@@ -1,7 +1,9 @@
 import { ILogger } from "../utils/logger";
 import { TaskExecutionError } from "../errors/TaskExecutionError";
 
-export default class Scheduler {
+export class Scheduler {
+  private intervals: NodeJS.Timeout[] = [];
+
   constructor(public logger: ILogger) {}
 
   startTask(
@@ -11,7 +13,7 @@ export default class Scheduler {
   ): void {
     this.logger.info(`Task "${name}" started with interval ${interval}ms`);
 
-    setInterval(() => {
+    const id = setInterval(() => {
       try {
         taskFunction(this.logger);
       } catch (error) {
@@ -25,5 +27,12 @@ export default class Scheduler {
         });
       }
     }, interval);
+
+    this.intervals.push(id);
+  }
+
+  public stopAll(): void {
+    this.intervals.forEach(clearInterval);
+    this.intervals = [];
   }
 }
