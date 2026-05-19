@@ -34,23 +34,27 @@ describe("Scheduler", () => {
   });
 
   it("должен выполнять задачу ровно один раз после одного интервала", () => {
-    const taskMock = jest.fn();
+    const taskMock = {
+      execute: jest.fn(),
+    };
     const INTERVAL = 10_000;
 
     scheduler.startTask("TestTask", INTERVAL, taskMock);
 
-    expect(taskMock).not.toHaveBeenCalled();
+    expect(taskMock.execute).not.toHaveBeenCalled();
 
     jest.advanceTimersByTime(INTERVAL);
 
-    expect(taskMock).toHaveBeenCalledTimes(1);
+    expect(taskMock.execute).toHaveBeenCalledTimes(1);
     expect(loggerMock.info).toHaveBeenCalledWith(
       expect.stringContaining("TestTask"),
     );
   });
 
   it("должен выполнять задачу N раз после N интервалов", () => {
-    const taskMock = jest.fn();
+    const taskMock = {
+      execute: jest.fn(),
+    };
     const INTERVAL = 10_000;
     const TICKS = 3;
 
@@ -58,20 +62,22 @@ describe("Scheduler", () => {
 
     jest.advanceTimersByTime(INTERVAL * TICKS);
 
-    expect(taskMock).toHaveBeenCalledTimes(TICKS);
+    expect(taskMock.execute).toHaveBeenCalledTimes(TICKS);
   });
 
   it("должен логировать ошибку с именем задачи, если задача выбрасывает исключение", () => {
     const INTERVAL = 1_000;
-    const errorTask = jest.fn().mockImplementation(() => {
-      throw new Error("Boom!");
-    });
+    const errorTask = {
+      execute: jest.fn().mockImplementation(() => {
+        throw new Error("Boom!");
+      }),
+    };
 
     scheduler.startTask("ErrorTask", INTERVAL, errorTask);
 
     jest.advanceTimersByTime(INTERVAL);
 
-    expect(errorTask).toHaveBeenCalledTimes(1);
+    expect(errorTask.execute).toHaveBeenCalledTimes(1);
 
     expect(loggerMock.error).toHaveBeenCalledWith(
       expect.stringContaining("TaskExecutionError"),

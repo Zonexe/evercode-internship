@@ -1,5 +1,9 @@
 import { ILogger } from "../utils/logger";
 
-export const myPeriodicTask = (logger: ILogger): void => {
-  logger.info("Задача выполняется...");
-};
+export class MyTask {
+  constructor(private readonly logger: ILogger) {}
+
+  public execute(): void {
+    this.logger.info("Задача выполняется...");
+  }
+}
