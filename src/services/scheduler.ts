@@ -1,21 +1,21 @@
 import { ILogger } from "../utils/logger";
 import { TaskExecutionError } from "../errors/TaskExecutionError";
 
+export interface ITask {
+  execute(): void;
+}
+
 export class Scheduler {
   private intervals: NodeJS.Timeout[] = [];
 
-  constructor(public logger: ILogger) {}
+  constructor(private readonly logger: ILogger) {}
 
-  startTask(
-    name: string,
-    interval: number,
-    taskFunction: (logger: ILogger) => void,
-  ): void {
+  public startTask(name: string, interval: number, task: ITask): void {
     this.logger.info(`Task "${name}" started with interval ${interval}ms`);
 
     const id = setInterval(() => {
       try {
-        taskFunction(this.logger);
+        task.execute();
       } catch (error) {
         const wrappedError = new TaskExecutionError(
           error instanceof Error ? error.message : "Unknown task error",
