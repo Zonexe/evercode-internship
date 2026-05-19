@@ -1,7 +1,11 @@
 import { ILogger } from "../utils/logger";
 
 export class MyTask {
-  constructor(private readonly logger: ILogger) {}
+  private readonly logger: ILogger;
+
+  constructor({ logger }: { logger: ILogger }) {
+    this.logger = logger;
+  }
 
   public execute(): void {
     this.logger.info("Задача выполняется...");
