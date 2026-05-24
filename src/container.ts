@@ -7,6 +7,7 @@ import {
 } from "awilix";
 import { Logger, ILogger, LogLevel } from "./utils/logger";
 import { Scheduler } from "./services/scheduler";
+import { App } from "./app";
 import { MyTask } from "./tasks/myTask";
 import config from "./config";
 
@@ -15,6 +16,7 @@ export interface AppCradle {
   logger: ILogger;
   scheduler: Scheduler;
   myTask: MyTask;
+  app: App;
 }
 
 const container = createContainer<AppCradle>({
@@ -34,6 +36,8 @@ container.register({
   scheduler: asFunction((c) => new Scheduler(c.logger)).singleton(),
 
   myTask: asClass(MyTask).singleton(),
+
+  app: asClass(App).singleton(),
 });
 
 export default container;
