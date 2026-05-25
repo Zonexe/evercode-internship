@@ -1,3 +1,5 @@
+process.env.API_TOKEN = "a".repeat(64);
+
 const { createDefaultPreset } = require("ts-jest");
 
 const tsJestTransformCfg = createDefaultPreset().transform;

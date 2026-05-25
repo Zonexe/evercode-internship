@@ -1,3 +1,5 @@
+import "dotenv/config"; 
+
 interface AppConfig {
   appName: string;
   version: string;
