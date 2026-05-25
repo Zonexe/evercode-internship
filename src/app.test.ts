@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, jest } from "@jest/globals";
 import request from "supertest";
 import { App } from "./app";
 import { ILogger } from "./utils/logger";
+import { createAuthMiddleware } from "./middlewares/authMiddleware";
 import config from "./config";
 
 describe("App (Integration)", () => {
@@ -17,19 +18,48 @@ describe("App (Integration)", () => {
       error: jest.fn(),
     };
 
+    const authMiddleware = createAuthMiddleware(config.apiToken);
+
     appInstance = new App({
       logger: loggerMock,
       config: config,
+      authMiddleware,
     });
   });
 
-  describe("GET /status", () => {
-    it("should return status 200 and text 'ok'", async () => {
+  describe("GET /status (Public)", () => {
+    it("should return status 200 and text 'ok' without authorization token", async () => {
       const response = await request(appInstance.expressApp).get("/status");
+      expect(response.status).toBe(200);
+      expect(response.text).toBe("ok");
+    });
+  });
+
+  describe("GET /protected-route (Protected Zone)", () => {
+    it("should return status 403 if authorization token is missing", async () => {
+      const response = await request(appInstance.expressApp).get(
+        "/protected-route",
+      );
+      expect(response.status).toBe(403);
+      expect(response.text).toContain("Missing Authorization header");
+    });
+
+    it("should return status 403 if token is invalid", async () => {
+      const response = await request(appInstance.expressApp)
+        .get("/protected-route")
+        .set("Authorization", "Bearer invalid-token-sample");
+
+      expect(response.status).toBe(403);
+      expect(response.text).toContain("Invalid API token");
+    });
+
+    it("should return status 200 and secret data if token is valid", async () => {
+      const response = await request(appInstance.expressApp)
+        .get("/protected-route")
+        .set("Authorization", `Bearer ${config.apiToken}`);
 
       expect(response.status).toBe(200);
-
-      expect(response.text).toBe("ok");
+      expect(response.body).toEqual({ data: "secret data" });
     });
   });
 });

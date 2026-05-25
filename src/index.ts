@@ -1,3 +1,4 @@
+import "dotenv/config";
 import container from "./container";
 
 const logger = container.resolve("logger");
@@ -7,7 +8,7 @@ const myTask = container.resolve("myTask");
 const app = container.resolve("app");
 
 logger.info(
-  `Приложение "${config.appName}" (v${config.version}) инициализировано.`,
+  `Приложение "${config.appName}" (v${config.version}) успешно инициализировано.`,
 );
 
 app.start();
