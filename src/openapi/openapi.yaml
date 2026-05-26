@@ -1,0 +1,230 @@
+openapi: 3.0.3
+info:
+  title: Evercode Internship Currency API
+  description: API для управления списком валют и демонстрации работы архитектурных слоев Express + Awilix.
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:3000
+    description: Локальный сервер разработки
+
+security:
+  - BearerAuth: []
+
+paths:
+  /status:
+    get:
+      summary: Проверить статус сервера
+      description: Публичный эндпоинт, доступен без токена авторизации.
+      security: []
+      responses:
+        "200":
+          description: Сервер работает нормально
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: ok
+
+  /protected-route:
+    get:
+      summary: Демонстрация защищенного роута
+      description: Требует валидный Bearer токен в заголовках.
+      responses:
+        "200":
+          description: Успешный доступ к секретным данным
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: string
+                    example: secret data
+        "403":
+          $ref: "#/components/responses/403Forbidden"
+
+  /currencies:
+    get:
+      summary: Получить список всех валют
+      description: Возвращает массив всех валют, хранящихся в оперативной памяти.
+      responses:
+        "200":
+          description: Список успешно получен
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Currency"
+        "403":
+          $ref: "#/components/responses/403Forbidden"
+
+    post:
+      summary: Создать новую валюту
+      description: Добавляет новую валюту в систему. Тикер автоматически переводится в верхний регистр.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCurrencyDto"
+      responses:
+        "201":
+          description: Валюта успешно создана
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Currency"
+        "400":
+          $ref: "#/components/responses/400BadRequest"
+        "403":
+          $ref: "#/components/responses/403Forbidden"
+        "409":
+          description: Конфликт — валюта с таким тикером уже существует
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /currencies/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: Уникальный UUID валюты
+        schema:
+          type: string
+          format: uuid
+
+    get:
+      summary: Получить валюту по её ID
+      responses:
+        "200":
+          description: Валюта успешно найдена
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Currency"
+        "403":
+          $ref: "#/components/responses/403Forbidden"
+        "404":
+          $ref: "#/components/responses/404NotFound"
+
+    put:
+      summary: Обновить существующую валюту
+      description: Позволяет частично или полностью обновить название (name) или тикер (ticker) валюты.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCurrencyDto"
+      responses:
+        "200":
+          description: Валюта успешно обновлена
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Currency"
+        "400":
+          $ref: "#/components/responses/400BadRequest"
+        "403":
+          $ref: "#/components/responses/403Forbidden"
+        "404":
+          $ref: "#/components/responses/404NotFound"
+        "409":
+          description: Конфликт — измененный тикер уже занят другой валютой
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    delete:
+      summary: Удалить валюту по её ID
+      responses:
+        "204":
+          description: Валюта успешно удалена, тело ответа отсутствует
+        "403":
+          $ref: "#/components/responses/403Forbidden"
+        "404":
+          $ref: "#/components/responses/404NotFound"
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: Введите ваш API_TOKEN (64 символа)
+
+  schemas:
+    Currency:
+      type: object
+      required:
+        - id
+        - name
+        - ticker
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: d3b07384-d113-4956-a5d2-aa1e030c2533
+        name:
+          type: string
+          example: United States Dollar
+        ticker:
+          type: string
+          example: USD
+
+    CreateCurrencyDto:
+      type: object
+      required:
+        - name
+        - ticker
+      properties:
+        name:
+          type: string
+          example: Euro
+        ticker:
+          type: string
+          example: EUR
+
+    UpdateCurrencyDto:
+      type: object
+      properties:
+        name:
+          type: string
+          example: Euro Classic
+        ticker:
+          type: string
+          example: EURC
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          example: Описание возникшей ошибки
+
+  responses:
+    400BadRequest:
+      description: Невалидные входящие данные (ошибка на стороне клиента)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    403Forbidden:
+      description: Ошибка авторизации (неверный или отсутствующий токен)
+      content:
+        text/plain:
+          schema:
+            type: string
+            example: "Forbidden: Missing Authorization header"
+
+    404NotFound:
+      description: Запрашиваемый ресурс не найден
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
