@@ -36,6 +36,7 @@
   },
   "dependencies": {
     "awilix": "^13.0.3",
+    "dotenv": "^17.4.2",
     "express": "^5.2.1"
   }
 }
