@@ -10,8 +10,13 @@ import { Scheduler } from "./services/scheduler";
 import { App } from "./app";
 import { MyTask } from "./tasks/myTask";
 import { createAuthMiddleware } from "./middlewares/authMiddleware";
-import { RequestHandler } from "express";
+import { RequestHandler, Router } from "express";
 import config from "./config";
+
+import { ICurrencyRepository } from "./currencies/currency.types";
+import { InMemoryCurrencyRepository } from "./currencies/currencyRepository";
+import { CurrencyController } from "./currencies/currencyController";
+import { createCurrencyRouter } from "./currencies/currencyRouter";
 
 export interface AppCradle {
   config: typeof config;
@@ -19,6 +24,11 @@ export interface AppCradle {
   scheduler: Scheduler;
   myTask: MyTask;
   authMiddleware: RequestHandler;
+
+  currencyRepository: ICurrencyRepository;
+  currencyController: CurrencyController;
+  currencyRouter: Router;
+
   app: App;
 }
 
@@ -43,6 +53,10 @@ container.register({
   authMiddleware: asFunction((c) =>
     createAuthMiddleware(c.config.apiToken),
   ).singleton(),
+
+  currencyRepository: asClass(InMemoryCurrencyRepository).singleton(),
+  currencyController: asClass(CurrencyController).singleton(),
+  currencyRouter: asFunction(createCurrencyRouter).singleton(),
 
   app: asClass(App).singleton(),
 });

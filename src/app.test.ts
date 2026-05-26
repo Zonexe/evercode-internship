@@ -4,6 +4,7 @@ import { App } from "./app";
 import { ILogger } from "./utils/logger";
 import { createAuthMiddleware } from "./middlewares/authMiddleware";
 import config from "./config";
+import express, { Router } from "express";
 
 describe("App (Integration)", () => {
   let loggerMock: ILogger;
@@ -20,10 +21,13 @@ describe("App (Integration)", () => {
 
     const authMiddleware = createAuthMiddleware(config.apiToken);
 
+    const dummyRouter = express.Router();
+
     appInstance = new App({
       logger: loggerMock,
       config: config,
       authMiddleware,
+      currencyRouter: dummyRouter,
     });
   });
 

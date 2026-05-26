@@ -3,28 +3,37 @@ import express, {
   Request,
   Response,
   RequestHandler,
+  Router,
 } from "express";
 import { ILogger } from "./utils/logger";
 import AppConfig from "./config";
+import fs from "fs";
+import path from "path";
+import yaml from "js-yaml";
+import swaggerUi from "swagger-ui-express";
 
 export class App {
   public readonly expressApp: Application;
   private readonly logger: ILogger;
   private readonly config: typeof AppConfig;
   private readonly authMiddleware: RequestHandler;
+  private readonly currencyRouter: Router;
 
   constructor({
     logger,
     config,
     authMiddleware,
+    currencyRouter,
   }: {
     logger: ILogger;
     config: typeof AppConfig;
     authMiddleware: RequestHandler;
+    currencyRouter: Router;
   }) {
     this.logger = logger;
     this.config = config;
     this.authMiddleware = authMiddleware;
+    this.currencyRouter = currencyRouter;
 
     this.expressApp = express();
 
@@ -32,6 +41,32 @@ export class App {
   }
 
   private setupRoutes(): void {
+    try {
+      const swaggerDocumentPath = path.join(
+        __dirname,
+        "openapi",
+        "openapi.yaml",
+      );
+
+      const fileContents = fs.readFileSync(swaggerDocumentPath, "utf8");
+      const swaggerDocument = yaml.load(fileContents) as Record<string, any>;
+
+      this.expressApp.use(
+        "/api-docs",
+        swaggerUi.serve,
+        swaggerUi.setup(swaggerDocument),
+      );
+      this.logger.info(
+        "Документация OpenAPI успешно смонтирована на роут /api-docs",
+      );
+    } catch (error) {
+      this.logger.error("Не удалось инициализировать документация OpenAPI", {
+        context: {
+          error: error instanceof Error ? error.message : String(error),
+        },
+      });
+    }
+
     this.expressApp.get("/status", (req: Request, res: Response) => {
       res.send("ok");
     });
@@ -41,6 +76,8 @@ export class App {
     this.expressApp.get("/protected-route", (req: Request, res: Response) => {
       res.json({ data: "secret data" });
     });
+
+    this.expressApp.use("/currencies", this.currencyRouter);
   }
 
   public start(): void {
