@@ -18,22 +18,26 @@ export class App {
   private readonly config: typeof AppConfig;
   private readonly authMiddleware: RequestHandler;
   private readonly currencyRouter: Router;
+  private readonly priceRouter: Router;
 
   constructor({
     logger,
     config,
     authMiddleware,
     currencyRouter,
+    priceRouter,
   }: {
     logger: ILogger;
     config: typeof AppConfig;
     authMiddleware: RequestHandler;
     currencyRouter: Router;
+    priceRouter: Router;
   }) {
     this.logger = logger;
     this.config = config;
     this.authMiddleware = authMiddleware;
     this.currencyRouter = currencyRouter;
+    this.priceRouter = priceRouter;
 
     this.expressApp = express();
 
@@ -78,6 +82,7 @@ export class App {
     });
 
     this.expressApp.use("/currencies", this.currencyRouter);
+    this.expressApp.use("/price", this.priceRouter);
   }
 
   public start(): void {

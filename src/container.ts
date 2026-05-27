@@ -18,6 +18,11 @@ import { InMemoryCurrencyRepository } from "./currencies/currencyRepository";
 import { CurrencyController } from "./currencies/currencyController";
 import { createCurrencyRouter } from "./currencies/currencyRouter";
 
+import { IBinanceService } from "./price/binance.types";
+import { BinanceHttpService } from "./price/binanceService";
+import { PriceController } from "./price/priceController";
+import { createPriceRouter } from "./price/priceRouter";
+
 export interface AppCradle {
   config: typeof config;
   logger: ILogger;
@@ -28,6 +33,10 @@ export interface AppCradle {
   currencyRepository: ICurrencyRepository;
   currencyController: CurrencyController;
   currencyRouter: Router;
+
+  binanceService: IBinanceService;
+  priceController: PriceController;
+  priceRouter: Router;
 
   app: App;
 }
@@ -47,9 +56,7 @@ container.register({
   ),
 
   scheduler: asFunction((c) => new Scheduler(c.logger)).singleton(),
-
   myTask: asClass(MyTask).singleton(),
-
   authMiddleware: asFunction((c) =>
     createAuthMiddleware(c.config.apiToken),
   ).singleton(),
@@ -57,6 +64,10 @@ container.register({
   currencyRepository: asClass(InMemoryCurrencyRepository).singleton(),
   currencyController: asClass(CurrencyController).singleton(),
   currencyRouter: asFunction(createCurrencyRouter).singleton(),
+
+  binanceService: asClass(BinanceHttpService).singleton(),
+  priceController: asClass(PriceController).singleton(),
+  priceRouter: asFunction(createPriceRouter).singleton(),
 
   app: asClass(App).singleton(),
 });
