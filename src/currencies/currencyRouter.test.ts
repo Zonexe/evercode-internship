@@ -1,3 +1,4 @@
+import express from "express";
 import { describe, it, expect, beforeEach, jest } from "@jest/globals";
 import request from "supertest";
 import { App } from "../app";
@@ -36,6 +37,7 @@ describe("Currency API (Integration)", () => {
       config: config,
       authMiddleware,
       currencyRouter,
+      priceRouter: express.Router(),
     });
   });
 
