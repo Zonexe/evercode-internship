@@ -28,6 +28,7 @@ describe("App (Integration)", () => {
       config: config,
       authMiddleware,
       currencyRouter: dummyRouter,
+      priceRouter: dummyRouter,
     });
   });
 

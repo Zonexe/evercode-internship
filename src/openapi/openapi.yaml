@@ -150,6 +150,50 @@ paths:
         "404":
           $ref: "#/components/responses/404NotFound"
 
+  /price:
+    get:
+      summary: Получить курсы торговых пар валюты с Binance
+      description: Ищет валюту в реестре приложения по тикеру и запрашивает все соответствующие курсы с Binance API. Доступно только авторизованным пользователям.
+      parameters:
+        - name: currency
+          in: query
+          required: true
+          description: Тикер запрашиваемой валюты (например, BTC)
+          schema:
+            type: string
+            example: BTC
+      responses:
+        "200":
+          description: Успешное получение списка отфильтрованных курсов
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required:
+                    - symbol
+                    - price
+                  properties:
+                    symbol:
+                      type: string
+                      example: BTCUSDT
+                    price:
+                      type: string
+                      example: "96450.12000000"
+        "400":
+          $ref: "#/components/responses/400BadRequest"
+        "403":
+          $ref: "#/components/responses/403Forbidden"
+        "404":
+          $ref: "#/components/responses/404NotFound"
+        "502":
+          description: Ошибка внешнего шлюза (Binance недоступен после ретраев)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   securitySchemes:
     BearerAuth:
