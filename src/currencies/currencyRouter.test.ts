@@ -32,12 +32,21 @@ describe("Currency API (Integration)", () => {
 
     const authMiddleware = createAuthMiddleware(validToken);
 
+    const dummyErrorMiddleware: express.ErrorRequestHandler = (
+      err,
+      req,
+      res,
+      next,
+    ) => {
+      res.status(err.statusCode || 500).json({ error: err.message });
+    };
     appInstance = new App({
       logger: loggerMock,
       config: config,
       authMiddleware,
       currencyRouter,
       priceRouter: express.Router(),
+      errorMiddleware: dummyErrorMiddleware,
     });
   });
 

@@ -22,6 +22,14 @@ describe("App (Integration)", () => {
     const authMiddleware = createAuthMiddleware(config.apiToken);
 
     const dummyRouter = express.Router();
+    const dummyErrorMiddleware: express.ErrorRequestHandler = (
+      err,
+      req,
+      res,
+      next,
+    ) => {
+      res.status(err.statusCode || 500).json({ error: err.message });
+    };
 
     appInstance = new App({
       logger: loggerMock,
@@ -29,6 +37,7 @@ describe("App (Integration)", () => {
       authMiddleware,
       currencyRouter: dummyRouter,
       priceRouter: dummyRouter,
+      errorMiddleware: dummyErrorMiddleware,
     });
   });
 
