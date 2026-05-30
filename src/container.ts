@@ -10,6 +10,7 @@ import { Scheduler } from "./services/scheduler";
 import { App } from "./app";
 import { MyTask } from "./tasks/myTask";
 import { createAuthMiddleware } from "./middlewares/authMiddleware";
+import { createErrorMiddleware } from "./middlewares/errorMiddleware";
 import { RequestHandler, Router } from "express";
 import config from "./config";
 
@@ -68,6 +69,10 @@ container.register({
   binanceService: asClass(BinanceHttpService).singleton(),
   priceController: asClass(PriceController).singleton(),
   priceRouter: asFunction(createPriceRouter).singleton(),
+
+  errorMiddleware: asFunction((c) =>
+    createErrorMiddleware(c.logger),
+  ).singleton(),
 
   app: asClass(App).singleton(),
 });
