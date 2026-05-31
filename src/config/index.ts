@@ -1,10 +1,11 @@
-import "dotenv/config"; 
+import "dotenv/config";
 
 interface AppConfig {
   appName: string;
   version: string;
   port: number;
   apiToken: string;
+  dbPath: string;
 }
 
 const rawApiToken = process.env.API_TOKEN;
@@ -26,6 +27,7 @@ const config: AppConfig = {
   version: process.env.APP_VERSION || "1.0.0",
   port: Number(process.env.PORT) || 3000,
   apiToken: rawApiToken,
+  dbPath: process.env.DB_PATH || "./data/currencies.db",
 };
 
 export default config;

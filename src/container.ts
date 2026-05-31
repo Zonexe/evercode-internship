@@ -14,6 +14,10 @@ import { createErrorMiddleware } from "./middlewares/errorMiddleware";
 import { RequestHandler, Router } from "express";
 import config from "./config";
 
+import Database from "better-sqlite3";
+import { createDatabase } from "./db/database";
+import { SqliteCurrencyRepository } from "./currencies/sqliteCurrencyRepository";
+
 import { ICurrencyRepository } from "./currencies/currency.types";
 import { InMemoryCurrencyRepository } from "./currencies/currencyRepository";
 import { CurrencyController } from "./currencies/currencyController";
@@ -30,6 +34,8 @@ export interface AppCradle {
   scheduler: Scheduler;
   myTask: MyTask;
   authMiddleware: RequestHandler;
+
+  database: Database.Database;
 
   currencyRepository: ICurrencyRepository;
   currencyController: CurrencyController;
@@ -56,13 +62,15 @@ container.register({
     }),
   ),
 
+  database: asFunction((c) => createDatabase(c.config.dbPath)).singleton(),
+
   scheduler: asFunction((c) => new Scheduler(c.logger)).singleton(),
   myTask: asClass(MyTask).singleton(),
   authMiddleware: asFunction((c) =>
     createAuthMiddleware(c.config.apiToken),
   ).singleton(),
 
-  currencyRepository: asClass(InMemoryCurrencyRepository).singleton(),
+  currencyRepository: asClass(SqliteCurrencyRepository).singleton(),
   currencyController: asClass(CurrencyController).singleton(),
   currencyRouter: asFunction(createCurrencyRouter).singleton(),
 
