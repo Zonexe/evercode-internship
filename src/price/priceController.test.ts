@@ -50,12 +50,22 @@ describe("Price API (Integration & Unit)", () => {
     const priceRouter = createPriceRouter({ priceController });
     const authMiddleware = createAuthMiddleware(validToken);
 
+    const dummyErrorMiddleware: express.ErrorRequestHandler = (
+      err,
+      req,
+      res,
+      next,
+    ) => {
+      res.status(err.statusCode || 500).json({ error: err.message });
+    };
+
     appInstance = new App({
       logger: loggerMock,
       config: config,
       authMiddleware,
       currencyRouter: express.Router(),
       priceRouter,
+      errorMiddleware: dummyErrorMiddleware,
     });
   });
 

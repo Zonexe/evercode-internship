@@ -3,6 +3,7 @@ import express, {
   Request,
   Response,
   RequestHandler,
+  ErrorRequestHandler,
   Router,
 } from "express";
 import { ILogger } from "./utils/logger";
@@ -19,6 +20,7 @@ export class App {
   private readonly authMiddleware: RequestHandler;
   private readonly currencyRouter: Router;
   private readonly priceRouter: Router;
+  private readonly errorMiddleware: ErrorRequestHandler;
 
   constructor({
     logger,
@@ -26,18 +28,21 @@ export class App {
     authMiddleware,
     currencyRouter,
     priceRouter,
+    errorMiddleware,
   }: {
     logger: ILogger;
     config: typeof AppConfig;
     authMiddleware: RequestHandler;
     currencyRouter: Router;
     priceRouter: Router;
+    errorMiddleware: ErrorRequestHandler;
   }) {
     this.logger = logger;
     this.config = config;
     this.authMiddleware = authMiddleware;
     this.currencyRouter = currencyRouter;
     this.priceRouter = priceRouter;
+    this.errorMiddleware = errorMiddleware;
 
     this.expressApp = express();
 
@@ -83,6 +88,8 @@ export class App {
 
     this.expressApp.use("/currencies", this.currencyRouter);
     this.expressApp.use("/price", this.priceRouter);
+
+    this.expressApp.use(this.errorMiddleware);
   }
 
   public start(): void {
