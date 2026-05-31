@@ -1,4 +1,4 @@
-import axios, { AxiosError } from "axios";
+import axios from "axios";
 import { ILogger } from "../utils/logger";
 import { AppError } from "../errors/AppError";
 import { BinancePriceItem, IBinanceService } from "./binance.types";
@@ -19,6 +19,7 @@ export class BinanceHttpService implements IBinanceService {
   public async getAllPrices(): Promise<BinancePriceItem[]> {
     const maxAttempts = 3;
     let currentDelay = 500;
+    let lastError: unknown;
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
@@ -32,6 +33,8 @@ export class BinanceHttpService implements IBinanceService {
 
         return response.data;
       } catch (error) {
+        lastError = error;
+
         const isLastAttempt = attempt === maxAttempts;
 
         if (axios.isAxiosError(error)) {
@@ -67,22 +70,20 @@ export class BinanceHttpService implements IBinanceService {
           );
         }
 
-        if (isLastAttempt) {
-          throw new AppError(
-            "Не удалось получить данные от Binance API после нескольких попыток.",
-            502,
-            {
-              originalError:
-                error instanceof Error ? error.message : String(error),
-            },
-          );
+        if (!isLastAttempt) {
+          await this.wait(currentDelay);
+          currentDelay *= 2;
         }
-
-        await this.wait(currentDelay);
-        currentDelay *= 2;
       }
     }
 
-    throw new AppError("Ошибка алгоритма повторных попыток", 500);
+    throw new AppError(
+      "Не удалось получить данные от Binance API после нескольких попыток.",
+      502,
+      {
+        originalError:
+          lastError instanceof Error ? lastError.message : String(lastError),
+      },
+    );
   }
 }
