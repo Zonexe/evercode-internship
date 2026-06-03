@@ -7,7 +7,7 @@ import express, {
   Router,
 } from "express";
 import { ILogger } from "./utils/logger";
-import AppConfig from "./config";
+import { config as AppConfig } from "./config";
 import fs from "fs";
 import path from "path";
 import yaml from "js-yaml";

@@ -3,7 +3,7 @@ import request from "supertest";
 import { App } from "./app";
 import { ILogger } from "./utils/logger";
 import { createAuthMiddleware } from "./middlewares/authMiddleware";
-import config from "./config";
+import { config } from "./config";
 import express, { Router } from "express";
 
 describe("App (Integration)", () => {
