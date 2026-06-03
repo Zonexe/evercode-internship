@@ -22,12 +22,23 @@ if (rawApiToken.length !== 64) {
   );
 }
 
-const config: AppConfig = {
+const parsePort = (rawPort: string | undefined): number => {
+  if (rawPort === undefined) {
+    return 3000;
+  }
+  const parsed = parseInt(rawPort, 10);
+  if (isNaN(parsed) || parsed < 0 || parsed > 65535) {
+    throw new Error(
+      `Критическая ошибка конфигурации: Недопустимый порт "${rawPort}".`,
+    );
+  }
+  return parsed;
+};
+
+export const config: AppConfig = {
   appName: process.env.APP_NAME || "EvercodeInternshipApp",
   version: process.env.APP_VERSION || "1.0.0",
-  port: Number(process.env.PORT) || 3000,
+  port: parsePort(process.env.PORT),
   apiToken: rawApiToken,
   dbPath: process.env.DB_PATH || "./data/currencies.db",
 };
-
-export default config;
