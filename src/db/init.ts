@@ -1,20 +1,9 @@
 import "dotenv/config";
-import fs from "fs";
-import path from "path";
 import { config } from "../config";
 import { createDatabase } from "./database";
 
 function initDb(): void {
   const dbPath = config.dbPath;
-
-  if (dbPath !== ":memory:") {
-    const dir = path.dirname(dbPath);
-
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-  }
-
   const db = createDatabase(dbPath);
 
   try {
