@@ -2,12 +2,12 @@ export class AppError extends Error {
   public readonly name: string;
   public readonly statusCode: number;
   public readonly timestamp: string;
-  public readonly context?: Record<string, any>;
+  public readonly context?: Record<string, unknown>;
 
   constructor(
     message: string,
     statusCode: number = 500,
-    context?: Record<string, any>,
+    context?: Record<string, unknown>,
   ) {
     super(message);
 
