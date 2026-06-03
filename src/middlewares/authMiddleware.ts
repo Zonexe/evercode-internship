@@ -10,13 +10,17 @@ export function createAuthMiddleware(expectedToken: string): RequestHandler {
     const authHeader = req.headers.authorization;
 
     if (!authHeader) {
-      res.status(403).send("Forbidden: Missing Authorization header");
+      res
+        .status(403)
+        .json({ error: "Forbidden: Missing Authorization header" });
       return;
     }
 
     const parts = authHeader.split(" ");
-    if (parts.length !== 2 || parts[0] !== "Bearer") {
-      res.status(403).send("Forbidden: Invalid Authorization header format");
+    if (parts.length !== 2 || parts[0] !== "Bearer" || parts[1].trim() === "") {
+      res
+        .status(403)
+        .json({ error: "Forbidden: Invalid Authorization header format" });
       return;
     }
 
@@ -34,7 +38,7 @@ export function createAuthMiddleware(expectedToken: string): RequestHandler {
     const isTokenValid = crypto.timingSafeEqual(expectedHash, providedHash);
 
     if (!isTokenValid) {
-      res.status(403).send("Forbidden: Invalid API token");
+      res.status(403).json({ error: "Forbidden: Invalid API token" });
       return;
     }
 

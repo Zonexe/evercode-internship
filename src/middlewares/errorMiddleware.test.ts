@@ -70,4 +70,25 @@ describe("errorMiddleware (Unit)", () => {
     expect(loggerMock.warn).toHaveBeenCalled();
     expect(loggerMock.error).not.toHaveBeenCalled();
   });
+
+  it("должен безопасно приводить к строке нетипизированные ошибки (например, строки) при логировании", () => {
+    const rawStringError = "Критический тайм-аут";
+
+    middleware(
+      rawStringError,
+      mockRequest as Request,
+      mockResponse as Response,
+      nextFunction,
+    );
+
+    expect(mockResponse.status).toHaveBeenCalledWith(500);
+    expect(mockResponse.json).toHaveBeenCalledWith({
+      error: "Internal Server Error",
+    });
+
+    expect(loggerMock.error).toHaveBeenCalledWith(
+      expect.stringContaining("Критический тайм-аут"),
+      expect.any(Object),
+    );
+  });
 });

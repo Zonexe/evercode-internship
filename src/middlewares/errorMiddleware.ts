@@ -27,7 +27,9 @@ export function createErrorMiddleware(logger: ILogger): ErrorRequestHandler {
     const context = hasHttpContext ? err.context : undefined;
 
     if (statusCode >= 500) {
-      logger.error(`[5xx Unhandled Error] ${err.message || err}`, {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+
+      logger.error(`[5xx Unhandled Error] ${errorMsg}`, {
         context: {
           statusCode,
           context,
