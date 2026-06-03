@@ -28,4 +28,18 @@ describe("Logger", () => {
 
     expect(transportMock).not.toHaveBeenCalled();
   });
+
+  it("should handle circular references in context safely without throwing an error", () => {
+    const circularObj: Record<string, unknown> = { message: "test" };
+    circularObj.self = circularObj;
+
+    expect(() => {
+      logger.info("Test circular reference", circularObj);
+    }).not.toThrow();
+
+    expect(transportMock).toHaveBeenCalledTimes(1);
+    expect(transportMock).toHaveBeenCalledWith(
+      expect.stringContaining("[Serialization Error:"),
+    );
+  });
 });
