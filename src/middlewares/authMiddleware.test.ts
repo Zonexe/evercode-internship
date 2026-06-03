@@ -19,7 +19,7 @@ describe("authMiddleware (Unit)", () => {
 
     mockResponse = {
       status: jest.fn().mockReturnThis() as any,
-      send: jest.fn() as any,
+      json: jest.fn() as any,
     };
 
     nextFunction = jest.fn();
@@ -34,7 +34,7 @@ describe("authMiddleware (Unit)", () => {
 
     expect(nextFunction).toHaveBeenCalledTimes(1);
     expect(mockResponse.status).not.toHaveBeenCalled();
-    expect(mockResponse.send).not.toHaveBeenCalled();
+    expect(mockResponse.json).not.toHaveBeenCalled();
   });
 
   it("should return 403 if authorization header is completely missing", () => {
@@ -42,9 +42,9 @@ describe("authMiddleware (Unit)", () => {
 
     expect(nextFunction).not.toHaveBeenCalled();
     expect(mockResponse.status).toHaveBeenCalledWith(403);
-    expect(mockResponse.send).toHaveBeenCalledWith(
-      expect.stringContaining("Missing Authorization header"),
-    );
+    expect(mockResponse.json).toHaveBeenCalledWith({
+      error: expect.stringContaining("Missing Authorization header"),
+    });
   });
 
   it("should return 403 if format is invalid (not Bearer)", () => {
@@ -56,6 +56,9 @@ describe("authMiddleware (Unit)", () => {
 
     expect(nextFunction).not.toHaveBeenCalled();
     expect(mockResponse.status).toHaveBeenCalledWith(403);
+    expect(mockResponse.json).toHaveBeenCalledWith({
+      error: expect.stringContaining("Invalid Authorization header format"),
+    });
   });
 
   it("should return 403 if token is incorrect", () => {
@@ -67,9 +70,9 @@ describe("authMiddleware (Unit)", () => {
 
     expect(nextFunction).not.toHaveBeenCalled();
     expect(mockResponse.status).toHaveBeenCalledWith(403);
-    expect(mockResponse.send).toHaveBeenCalledWith(
-      expect.stringContaining("Invalid API token"),
-    );
+    expect(mockResponse.json).toHaveBeenCalledWith({
+      error: expect.stringContaining("Invalid API token"),
+    });
   });
 
   it("should return 403 if token is empty after Bearer prefix", () => {
@@ -81,5 +84,8 @@ describe("authMiddleware (Unit)", () => {
 
     expect(nextFunction).not.toHaveBeenCalled();
     expect(mockResponse.status).toHaveBeenCalledWith(403);
+    expect(mockResponse.json).toHaveBeenCalledWith({
+      error: expect.stringContaining("Invalid Authorization header format"),
+    });
   });
 });
