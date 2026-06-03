@@ -7,7 +7,7 @@ import { createAuthMiddleware } from "../middlewares/authMiddleware";
 import { InMemoryCurrencyRepository } from "./currencyRepository";
 import { CurrencyController } from "./currencyController";
 import { createCurrencyRouter } from "./currencyRouter";
-import config from "../config";
+import { config } from "../config";
 
 describe("Currency API (Integration)", () => {
   let appInstance: App;

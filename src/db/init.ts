@@ -1,7 +1,7 @@
 import "dotenv/config";
 import fs from "fs";
 import path from "path";
-import config from "../config";
+import { config } from "../config";
 import { createDatabase } from "./database";
 
 function initDb(): void {

@@ -9,7 +9,7 @@ import { createPriceRouter } from "./priceRouter";
 import { IBinanceService } from "./binance.types";
 import { AppError } from "../errors/AppError";
 import { createAuthMiddleware } from "../middlewares/authMiddleware";
-import config from "../config";
+import { config } from "../config";
 
 describe("Price API (Integration & Unit)", () => {
   let appInstance: App;
