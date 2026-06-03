@@ -12,7 +12,7 @@ import { MyTask } from "./tasks/myTask";
 import { createAuthMiddleware } from "./middlewares/authMiddleware";
 import { createErrorMiddleware } from "./middlewares/errorMiddleware";
 import { RequestHandler, Router } from "express";
-import config from "./config";
+import { config } from "./config";
 
 import Database from "better-sqlite3";
 import { createDatabase } from "./db/database";
