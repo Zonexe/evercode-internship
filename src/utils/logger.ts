@@ -33,7 +33,15 @@ function formatLogMessage(
   const timestamp = new Date().toISOString();
   const levelName = LogLevel[level];
   const rid = requestId ? ` [RID:${requestId}]` : "";
-  const ctx = context ? ` | Context: ${JSON.stringify(context)}` : "";
+
+  let ctx = "";
+  if (context) {
+    try {
+      ctx = ` | Context: ${JSON.stringify(context)}`;
+    } catch (error) {
+      ctx = ` | Context: [Serialization Error: ${error instanceof Error ? error.message : String(error)}]`;
+    }
+  }
 
   return `${timestamp} [${levelName}] [${prefix}]${rid} - ${message}${ctx}`;
 }
@@ -48,7 +56,7 @@ export class Logger implements ILogger {
     prefix,
     requestId,
     minLevel = LogLevel.INFO,
-    transport = console.log,
+    transport = (msg) => console.log(msg),
   }: LoggerOptions) {
     this.prefix = prefix;
     this.requestId = requestId;
