@@ -46,6 +46,8 @@ export class App {
 
     this.expressApp = express();
 
+    this.expressApp.use(express.json());
+
     this.setupRoutes();
   }
 

@@ -8,7 +8,6 @@ export function createCurrencyRouter({
 }): Router {
   const router = express.Router();
 
-  router.use(express.json());
   router.post("/", currencyController.create);
   router.get("/", currencyController.getAll);
   router.get("/:id", currencyController.getById);
