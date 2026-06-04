@@ -55,7 +55,7 @@ describe("Currency API (Integration)", () => {
       const response = await request(appInstance.expressApp).get("/currencies");
 
       expect(response.status).toBe(403);
-      expect(response.text).toContain("Missing Authorization header");
+      expect(response.body.error).toContain("Missing Authorization header");
     });
 
     it("должен вернуть 403 Forbidden, если передан невалидный токен", async () => {
@@ -64,7 +64,7 @@ describe("Currency API (Integration)", () => {
         .set("Authorization", "Bearer invalid_token_value");
 
       expect(response.status).toBe(403);
-      expect(response.text).toContain("Invalid API token");
+      expect(response.body.error).toContain("Invalid API token");
     });
   });
 
