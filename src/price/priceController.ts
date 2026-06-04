@@ -2,7 +2,6 @@ import { Request, Response } from "express";
 import { ICurrencyRepository } from "../currencies/currency.types";
 import { IBinanceService } from "./binance.types";
 import { ILogger } from "../utils/logger";
-import { AppError } from "../errors/AppError";
 
 export class PriceController {
   private readonly currencyRepository: ICurrencyRepository;
@@ -44,41 +43,20 @@ export class PriceController {
       return;
     }
 
-    try {
-      this.logger.debug(
-        `Запрос курсов для валюты ${ticker} через Binance Service...`,
-      );
+    this.logger.debug(
+      `Запрос курсов для валюты ${ticker} через Binance Service...`,
+    );
 
-      const allPrices = await this.binanceService.getAllPrices();
+    const allPrices = await this.binanceService.getAllPrices();
 
-      const filteredPrices = allPrices.filter((item) =>
-        item.symbol.includes(ticker),
-      );
+    const filteredPrices = allPrices.filter((item) =>
+      item.symbol.includes(ticker),
+    );
 
-      this.logger.info(
-        `Для тикера "${ticker}" успешно найдено торговых пар на Binance: ${filteredPrices.length}`,
-      );
+    this.logger.info(
+      `Для тикера "${ticker}" успешно найдено торговых пар на Binance: ${filteredPrices.length}`,
+    );
 
-      res.json(filteredPrices);
-    } catch (error) {
-      this.logger.error(
-        "Контроллер зафиксировал сбой при запросе цен от Binance",
-        {
-          context: {
-            ticker,
-            error: error instanceof Error ? error.message : String(error),
-          },
-        },
-      );
-
-      if (error instanceof AppError) {
-        res.status(error.statusCode).json({ error: error.message });
-        return;
-      }
-
-      res.status(500).json({
-        error: "Внутренняя ошибка сервера при попытке получить цены",
-      });
-    }
+    res.json(filteredPrices);
   };
 }

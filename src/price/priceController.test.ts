@@ -76,7 +76,7 @@ describe("Price API (Integration & Unit)", () => {
         .query({ currency: "BTC" });
 
       expect(response.status).toBe(403);
-      expect(response.text).toContain("Missing Authorization header");
+      expect(response.body.error).toContain("Missing Authorization header");
     });
   });
 

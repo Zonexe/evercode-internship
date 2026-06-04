@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios, { AxiosInstance } from "axios";
 import { ILogger } from "../utils/logger";
 import { AppError } from "../errors/AppError";
 import { BinancePriceItem, IBinanceService } from "./binance.types";
@@ -7,9 +7,15 @@ const BINANCE_API_URL = "https://api.binance.com/api/v3/ticker/price";
 
 export class BinanceHttpService implements IBinanceService {
   private readonly logger: ILogger;
+  private readonly httpClient: AxiosInstance;
 
   constructor({ logger }: { logger: ILogger }) {
     this.logger = logger;
+
+    this.httpClient = axios.create({
+      baseURL: "https://api.binance.com",
+      timeout: 5000,
+    });
   }
 
   private wait(ms: number): Promise<void> {
@@ -27,9 +33,9 @@ export class BinanceHttpService implements IBinanceService {
           `Запрос к Binance API. Попытка ${attempt} из ${maxAttempts}...`,
         );
 
-        const response = await axios.get<BinancePriceItem[]>(BINANCE_API_URL, {
-          timeout: 5000,
-        });
+        const response = await this.httpClient.get<BinancePriceItem[]>(
+          "/api/v3/ticker/price",
+        );
 
         return response.data;
       } catch (error) {
