@@ -1,11 +1,7 @@
 import "dotenv/config";
 import container from "./container";
 
-const logger = container.resolve("logger");
-const scheduler = container.resolve("scheduler");
-const config = container.resolve("config");
-const myTask = container.resolve("myTask");
-const app = container.resolve("app");
+const { logger, scheduler, config, myTask, app } = container.cradle;
 
 logger.info(
   `Приложение "${config.appName}" (v${config.version}) успешно инициализировано.`,
