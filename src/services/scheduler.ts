@@ -2,7 +2,7 @@ import { ILogger } from "../utils/logger";
 import { TaskExecutionError } from "../errors/TaskExecutionError";
 
 export interface ITask {
-  execute(): void;
+  execute(): void | Promise<void>;
 }
 
 export class Scheduler {
@@ -13,9 +13,9 @@ export class Scheduler {
   public startTask(name: string, interval: number, task: ITask): void {
     this.logger.info(`Task "${name}" started with interval ${interval}ms`);
 
-    const id = setInterval(() => {
+    const id = setInterval(async () => {
       try {
-        task.execute();
+        await task.execute();
       } catch (error) {
         const wrappedError = new TaskExecutionError(
           error instanceof Error ? error.message : "Unknown task error",
