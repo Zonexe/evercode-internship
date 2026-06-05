@@ -54,7 +54,7 @@ export class App {
   private setupRoutes(): void {
     try {
       const swaggerDocumentPath = path.join(
-        __dirname,
+        process.cwd(),
         "openapi",
         "openapi.yaml",
       );

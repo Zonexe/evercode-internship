@@ -11,7 +11,7 @@ import { App } from "./app";
 import { MyTask } from "./tasks/myTask";
 import { createAuthMiddleware } from "./middlewares/authMiddleware";
 import { createErrorMiddleware } from "./middlewares/errorMiddleware";
-import { RequestHandler, Router } from "express";
+import { RequestHandler, Router, ErrorRequestHandler } from "express";
 import { config } from "./config";
 
 import Database from "better-sqlite3";
@@ -19,7 +19,6 @@ import { createDatabase } from "./db/database";
 import { SqliteCurrencyRepository } from "./currencies/sqliteCurrencyRepository";
 
 import { ICurrencyRepository } from "./currencies/currency.types";
-import { InMemoryCurrencyRepository } from "./currencies/currencyRepository";
 import { CurrencyController } from "./currencies/currencyController";
 import { createCurrencyRouter } from "./currencies/currencyRouter";
 
@@ -44,6 +43,8 @@ export interface AppCradle {
   binanceService: IBinanceService;
   priceController: PriceController;
   priceRouter: Router;
+
+  errorMiddleware: ErrorRequestHandler;
 
   app: App;
 }
