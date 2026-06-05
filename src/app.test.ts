@@ -55,7 +55,8 @@ describe("App (Integration)", () => {
         "/protected-route",
       );
       expect(response.status).toBe(403);
-      expect(response.text).toContain("Missing Authorization header");
+
+      expect(response.body.error).toContain("Missing Authorization header");
     });
 
     it("should return status 403 if token is invalid", async () => {
@@ -64,7 +65,7 @@ describe("App (Integration)", () => {
         .set("Authorization", "Bearer invalid-token-sample");
 
       expect(response.status).toBe(403);
-      expect(response.text).toContain("Invalid API token");
+      expect(response.body.error).toContain("Invalid API token");
     });
 
     it("should return status 200 and secret data if token is valid", async () => {
