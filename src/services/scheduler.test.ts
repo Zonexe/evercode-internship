@@ -7,7 +7,7 @@ import {
   jest,
 } from "@jest/globals";
 import type { MockedObject } from "jest-mock";
-import { Scheduler } from "./scheduler";
+import { Scheduler, ITask } from "./scheduler";
 import { ILogger } from "../utils/logger";
 
 describe("Scheduler", () => {
@@ -33,9 +33,9 @@ describe("Scheduler", () => {
     jest.useRealTimers();
   });
 
-  it("должен выполнять задачу ровно один раз после одного интервала", () => {
-    const taskMock = {
-      execute: jest.fn(),
+  it("должен выполнять задачу ровно один раз после одного интервала", async () => {
+    const taskMock: ITask = {
+      execute: jest.fn(() => {}),
     };
     const INTERVAL = 10_000;
 
@@ -43,7 +43,7 @@ describe("Scheduler", () => {
 
     expect(taskMock.execute).not.toHaveBeenCalled();
 
-    jest.advanceTimersByTime(INTERVAL);
+    await jest.advanceTimersByTimeAsync(INTERVAL);
 
     expect(taskMock.execute).toHaveBeenCalledTimes(1);
     expect(loggerMock.info).toHaveBeenCalledWith(
@@ -51,31 +51,30 @@ describe("Scheduler", () => {
     );
   });
 
-  it("должен выполнять задачу N раз после N интервалов", () => {
-    const taskMock = {
-      execute: jest.fn(),
+  it("должен выполнять задачу N раз после N интервалов", async () => {
+    const taskMock: ITask = {
+      execute: jest.fn(() => {}),
     };
     const INTERVAL = 10_000;
     const TICKS = 3;
 
     scheduler.startTask("RepeatingTask", INTERVAL, taskMock);
 
-    jest.advanceTimersByTime(INTERVAL * TICKS);
+    await jest.advanceTimersByTimeAsync(INTERVAL * TICKS);
 
     expect(taskMock.execute).toHaveBeenCalledTimes(TICKS);
   });
 
-  it("должен логировать ошибку с именем задачи, если задача выбрасывает исключение", () => {
+  it("должен логировать ошибку с именем задачи, если задача выбрасывает исключение", async () => {
     const INTERVAL = 1_000;
-    const errorTask = {
-      execute: jest.fn().mockImplementation(() => {
+    const errorTask: ITask = {
+      execute: jest.fn(() => {
         throw new Error("Boom!");
       }),
     };
-
     scheduler.startTask("ErrorTask", INTERVAL, errorTask);
 
-    jest.advanceTimersByTime(INTERVAL);
+    await jest.advanceTimersByTimeAsync(INTERVAL);
 
     expect(errorTask.execute).toHaveBeenCalledTimes(1);
 
