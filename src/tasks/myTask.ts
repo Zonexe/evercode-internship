@@ -1,6 +1,7 @@
 import { ILogger } from "../utils/logger";
+import { ITask } from "../services/scheduler";
 
-export class MyTask {
+export class MyTask implements ITask {
   private readonly logger: ILogger;
 
   constructor({ logger }: { logger: ILogger }) {
