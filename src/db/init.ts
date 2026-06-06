@@ -7,7 +7,7 @@ function initDb(): void {
   const db = createDatabase(dbPath);
 
   try {
-    db.pragma("foreign_keys = ON");
+    db.exec("PRAGMA foreign_keys = ON;");
 
     db.exec(`
       CREATE TABLE IF NOT EXISTS currencies (
