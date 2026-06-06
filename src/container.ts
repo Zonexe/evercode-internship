@@ -14,7 +14,7 @@ import { createErrorMiddleware } from "./middlewares/errorMiddleware";
 import { RequestHandler, Router, ErrorRequestHandler } from "express";
 import { config } from "./config";
 
-import Database from "better-sqlite3";
+import { DatabaseSync } from "node:sqlite";
 import { createDatabase } from "./db/database";
 import { SqliteCurrencyRepository } from "./currencies/sqliteCurrencyRepository";
 
@@ -34,7 +34,7 @@ export interface AppCradle {
   myTask: MyTask;
   authMiddleware: RequestHandler;
 
-  database: Database.Database;
+  database: DatabaseSync;
 
   currencyRepository: ICurrencyRepository;
   currencyController: CurrencyController;
