@@ -1,8 +1,8 @@
-import Database from "better-sqlite3";
+import { DatabaseSync } from "node:sqlite";
 import fs from "fs";
 import path from "path";
 
-export function createDatabase(dbPath: string): Database.Database {
+export function createDatabase(dbPath: string): DatabaseSync {
   if (dbPath !== ":memory:") {
     const dir = path.dirname(dbPath);
 
@@ -11,5 +11,5 @@ export function createDatabase(dbPath: string): Database.Database {
     }
   }
 
-  return new Database(dbPath);
+  return new DatabaseSync(dbPath);
 }
