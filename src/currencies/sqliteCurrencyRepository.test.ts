@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeEach, afterEach } from "@jest/globals";
-import Database from "better-sqlite3";
+import { DatabaseSync } from "node:sqlite";
 import { SqliteCurrencyRepository } from "./sqliteCurrencyRepository";
 
 describe("SqliteCurrencyRepository (Integration Tests)", () => {
-  let testDb: Database.Database;
+  let testDb: DatabaseSync;
   let repository: SqliteCurrencyRepository;
 
   beforeEach(() => {
-    testDb = new Database(":memory:");
+    testDb = new DatabaseSync(":memory:");
 
     testDb.exec(`
       CREATE TABLE IF NOT EXISTS currencies (
