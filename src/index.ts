@@ -1,7 +1,7 @@
 import "dotenv/config";
 import container from "./container";
 
-const { logger, scheduler, config, myTask, app } = container.cradle;
+const { logger, scheduler, config, updatePricesTask, app } = container.cradle;
 
 logger.info(
   `Приложение "${config.appName}" (v${config.version}) успешно инициализировано.`,
@@ -9,4 +9,4 @@ logger.info(
 
 app.start();
 
-scheduler.startTask("MyPeriodicTask", 10000, myTask);
+scheduler.startTask("UpdatePricesTask", 60000, updatePricesTask);

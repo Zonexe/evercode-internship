@@ -15,10 +15,18 @@ function initDb(): void {
         name TEXT NOT NULL,
         ticker TEXT NOT NULL UNIQUE
       );
+
+      CREATE TABLE IF NOT EXISTS prices (
+        id TEXT PRIMARY KEY,
+        currency_id TEXT NOT NULL,
+        symbol TEXT NOT NULL UNIQUE, -- уникальный символ, чтобы работал механизм UPSERT
+        price TEXT NOT NULL,
+        FOREIGN KEY(currency_id) REFERENCES currencies(id) ON DELETE CASCADE
+      );
     `);
 
     console.log(
-      `[Database] Инициализация успешно завершена. Файл БД: ${dbPath}`,
+      `[Database] Инициализация схемы успешно завершена. Файл БД: ${dbPath}`,
     );
   } catch (error) {
     console.error(

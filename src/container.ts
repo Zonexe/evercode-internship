@@ -9,6 +9,7 @@ import { Logger, ILogger, LogLevel } from "./utils/logger";
 import { Scheduler } from "./services/scheduler";
 import { App } from "./app";
 import { MyTask } from "./tasks/myTask";
+import { UpdatePricesTask } from "./tasks/updatePricesTask";
 import { createAuthMiddleware } from "./middlewares/authMiddleware";
 import { createErrorMiddleware } from "./middlewares/errorMiddleware";
 import { RequestHandler, Router, ErrorRequestHandler } from "express";
@@ -27,11 +28,15 @@ import { BinanceHttpService } from "./price/binanceService";
 import { PriceController } from "./price/priceController";
 import { createPriceRouter } from "./price/priceRouter";
 
+import { IPriceRepository } from "./price/price.types";
+import { SqlitePriceRepository } from "./price/sqlitePriceRepository";
+
 export interface AppCradle {
   config: typeof config;
   logger: ILogger;
   scheduler: Scheduler;
   myTask: MyTask;
+  updatePricesTask: UpdatePricesTask;
   authMiddleware: RequestHandler;
 
   database: DatabaseSync;
@@ -39,6 +44,8 @@ export interface AppCradle {
   currencyRepository: ICurrencyRepository;
   currencyController: CurrencyController;
   currencyRouter: Router;
+
+  priceRepository: IPriceRepository;
 
   binanceService: IBinanceService;
   priceController: PriceController;
@@ -67,6 +74,7 @@ container.register({
 
   scheduler: asFunction((c) => new Scheduler(c.logger)).singleton(),
   myTask: asClass(MyTask).singleton(),
+  updatePricesTask: asClass(UpdatePricesTask).singleton(),
   authMiddleware: asFunction((c) =>
     createAuthMiddleware(c.config.apiToken),
   ).singleton(),
@@ -74,6 +82,8 @@ container.register({
   currencyRepository: asClass(SqliteCurrencyRepository).singleton(),
   currencyController: asClass(CurrencyController).singleton(),
   currencyRouter: asFunction(createCurrencyRouter).singleton(),
+
+  priceRepository: asClass(SqlitePriceRepository).singleton(),
 
   binanceService: asClass(BinanceHttpService).singleton(),
   priceController: asClass(PriceController).singleton(),

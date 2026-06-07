@@ -6,24 +6,21 @@ import { ILogger } from "../utils/logger";
 import { InMemoryCurrencyRepository } from "../currencies/currencyRepository";
 import { PriceController } from "./priceController";
 import { createPriceRouter } from "./priceRouter";
-import { IBinanceService } from "./binance.types";
-import { AppError } from "../errors/AppError";
+import { IPriceRepository, Price } from "./price.types";
 import { createAuthMiddleware } from "../middlewares/authMiddleware";
 import { config } from "../config";
 
 describe("Price API (Integration & Unit)", () => {
   let appInstance: App;
   let repository: InMemoryCurrencyRepository;
-
-  let mockBinanceService: jest.Mocked<IBinanceService>;
+  let mockPriceRepository: jest.Mocked<IPriceRepository>;
 
   const validToken = config.apiToken;
 
-  const dummyBinancePrices = [
-    { symbol: "BTCUSDT", price: "75000.00" },
-    { symbol: "BTCEUR", price: "65000.00" },
-    { symbol: "ETHUSDT", price: "2000.00" },
-    { symbol: "ETHBTC", price: "0.027" },
+  const dummyPrices: Price[] = [
+    { id: "p1", currencyId: "cur-1", symbol: "BTCUSDT", price: "75000.00" },
+    { id: "p2", currencyId: "cur-1", symbol: "BTCEUR", price: "65000.00" },
+    { id: "p3", currencyId: "cur-1", symbol: "ETHBTC", price: "0.027" },
   ];
 
   beforeEach(() => {
@@ -37,13 +34,14 @@ describe("Price API (Integration & Unit)", () => {
 
     repository = new InMemoryCurrencyRepository();
 
-    mockBinanceService = {
-      getAllPrices: jest.fn<() => Promise<typeof dummyBinancePrices>>(),
-    } as unknown as jest.Mocked<IBinanceService>;
+    mockPriceRepository = {
+      savePrices: jest.fn(),
+      getPricesByTicker: jest.fn<() => Price[]>(),
+    } as unknown as jest.Mocked<IPriceRepository>;
 
     const priceController = new PriceController({
       currencyRepository: repository,
-      binanceService: mockBinanceService,
+      priceRepository: mockPriceRepository,
       logger: loggerMock,
     });
 
@@ -111,10 +109,10 @@ describe("Price API (Integration & Unit)", () => {
       expect(response.body.error).toContain("отсутствует в реестре");
     });
 
-    it("должен успешно вернуть 200 и отфильтрованные пары, если валюта есть в БД и Binance ответил успешно", async () => {
+    it("должен успешно вернуть 200 и сохраненные торговые пары из локальной БД", async () => {
       repository.create({ name: "Bitcoin", ticker: "BTC" });
 
-      mockBinanceService.getAllPrices.mockResolvedValue(dummyBinancePrices);
+      mockPriceRepository.getPricesByTicker.mockReturnValue(dummyPrices);
 
       const response = await request(appInstance.expressApp)
         .get("/price")
@@ -123,17 +121,13 @@ describe("Price API (Integration & Unit)", () => {
 
       expect(response.status).toBe(200);
       expect(response.body).toHaveLength(3);
-      expect(response.body).toEqual([
-        { symbol: "BTCUSDT", price: "75000.00" },
-        { symbol: "BTCEUR", price: "65000.00" },
-        { symbol: "ETHBTC", price: "0.027" },
-      ]);
+      expect(response.body).toEqual(dummyPrices);
     });
 
-    it("должен вернуть 200 и пустой массив, если для существующей валюты не нашлось пар на Binance", async () => {
+    it("должен вернуть 200 и пустой массив, если в СУБД нет сохраненных цен для существующей валюты", async () => {
       repository.create({ name: "MyCoin", ticker: "MYCOIN" });
 
-      mockBinanceService.getAllPrices.mockResolvedValue(dummyBinancePrices);
+      mockPriceRepository.getPricesByTicker.mockReturnValue([]);
 
       const response = await request(appInstance.expressApp)
         .get("/price")
@@ -144,25 +138,20 @@ describe("Price API (Integration & Unit)", () => {
       expect(response.body).toEqual([]);
     });
 
-    it("должен вернуть 502 Bad Gateway, если внешний сервис BinanceHttpService выбросил сетевую ошибку", async () => {
+    it("должен вернуть 500 Internal Server Error, если репозиторий выбросил ошибку чтения из БД", async () => {
       repository.create({ name: "Bitcoin", ticker: "BTC" });
 
-      mockBinanceService.getAllPrices.mockRejectedValue(
-        new AppError(
-          "Не удалось получить данные от Binance API после нескольких попыток.",
-          502,
-        ),
-      );
+      mockPriceRepository.getPricesByTicker.mockImplementation(() => {
+        throw new Error("Сбой дисковой подсистемы СУБД");
+      });
 
       const response = await request(appInstance.expressApp)
         .get("/price")
         .set("Authorization", `Bearer ${validToken}`)
         .query({ currency: "BTC" });
 
-      expect(response.status).toBe(502);
-      expect(response.body.error).toContain(
-        "Не удалось получить данные от Binance",
-      );
+      expect(response.status).toBe(500);
+      expect(response.body.error).toContain("Сбой дисковой подсистемы");
     });
   });
 });
