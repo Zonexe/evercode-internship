@@ -27,6 +27,9 @@ import { BinanceHttpService } from "./price/binanceService";
 import { PriceController } from "./price/priceController";
 import { createPriceRouter } from "./price/priceRouter";
 
+import { IPriceRepository } from "./price/price.types";
+import { SqlitePriceRepository } from "./price/sqlitePriceRepository";
+
 export interface AppCradle {
   config: typeof config;
   logger: ILogger;
@@ -39,6 +42,8 @@ export interface AppCradle {
   currencyRepository: ICurrencyRepository;
   currencyController: CurrencyController;
   currencyRouter: Router;
+
+  priceRepository: IPriceRepository;
 
   binanceService: IBinanceService;
   priceController: PriceController;
@@ -74,6 +79,8 @@ container.register({
   currencyRepository: asClass(SqliteCurrencyRepository).singleton(),
   currencyController: asClass(CurrencyController).singleton(),
   currencyRouter: asFunction(createCurrencyRouter).singleton(),
+
+  priceRepository: asClass(SqlitePriceRepository).singleton(),
 
   binanceService: asClass(BinanceHttpService).singleton(),
   priceController: asClass(PriceController).singleton(),
