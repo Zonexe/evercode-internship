@@ -9,6 +9,7 @@ import { Logger, ILogger, LogLevel } from "./utils/logger";
 import { Scheduler } from "./services/scheduler";
 import { App } from "./app";
 import { MyTask } from "./tasks/myTask";
+import { UpdatePricesTask } from "./tasks/updatePricesTask";
 import { createAuthMiddleware } from "./middlewares/authMiddleware";
 import { createErrorMiddleware } from "./middlewares/errorMiddleware";
 import { RequestHandler, Router, ErrorRequestHandler } from "express";
@@ -35,6 +36,7 @@ export interface AppCradle {
   logger: ILogger;
   scheduler: Scheduler;
   myTask: MyTask;
+  updatePricesTask: UpdatePricesTask;
   authMiddleware: RequestHandler;
 
   database: DatabaseSync;
@@ -72,6 +74,7 @@ container.register({
 
   scheduler: asFunction((c) => new Scheduler(c.logger)).singleton(),
   myTask: asClass(MyTask).singleton(),
+  updatePricesTask: asClass(UpdatePricesTask).singleton(),
   authMiddleware: asFunction((c) =>
     createAuthMiddleware(c.config.apiToken),
   ).singleton(),
