@@ -1,24 +1,24 @@
 import { Request, Response } from "express";
 import { ICurrencyRepository } from "../currencies/currency.types";
-import { IBinanceService } from "./binance.types";
+import { IPriceRepository } from "./price.types";
 import { ILogger } from "../utils/logger";
 
 export class PriceController {
   private readonly currencyRepository: ICurrencyRepository;
-  private readonly binanceService: IBinanceService;
+  private readonly priceRepository: IPriceRepository;
   private readonly logger: ILogger;
 
   constructor({
     currencyRepository,
-    binanceService,
+    priceRepository,
     logger,
   }: {
     currencyRepository: ICurrencyRepository;
-    binanceService: IBinanceService;
+    priceRepository: IPriceRepository;
     logger: ILogger;
   }) {
     this.currencyRepository = currencyRepository;
-    this.binanceService = binanceService;
+    this.priceRepository = priceRepository;
     this.logger = logger;
   }
 
@@ -43,20 +43,14 @@ export class PriceController {
       return;
     }
 
-    this.logger.debug(
-      `Запрос курсов для валюты ${ticker} через Binance Service...`,
-    );
+    this.logger.debug(`Запрос курсов для валюты ${ticker} из БД`);
 
-    const allPrices = await this.binanceService.getAllPrices();
-
-    const filteredPrices = allPrices.filter((item) =>
-      item.symbol.includes(ticker),
-    );
+    const cachedPrices = this.priceRepository.getPricesByTicker(ticker);
 
     this.logger.info(
-      `Для тикера "${ticker}" успешно найдено торговых пар на Binance: ${filteredPrices.length}`,
+      `Для тикера "${ticker}" успешно найдено торговых пар на Binance: ${cachedPrices.length}`,
     );
 
-    res.json(filteredPrices);
+    res.json(cachedPrices);
   };
 }
