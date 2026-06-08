@@ -35,10 +35,10 @@ const parsePort = (rawPort: string | undefined): number => {
   return parsed;
 };
 
-export const config: AppConfig = {
+export const config: Readonly<AppConfig> = Object.freeze({
   appName: process.env.APP_NAME || "EvercodeInternshipApp",
   version: process.env.APP_VERSION || "1.0.0",
   port: parsePort(process.env.PORT),
   apiToken: rawApiToken,
   dbPath: process.env.DB_PATH || "./data/currencies.db",
-};
+});
