@@ -37,6 +37,8 @@ describe("App (Integration)", () => {
       authMiddleware,
       currencyRouter: dummyRouter,
       priceRouter: dummyRouter,
+      addressRouter: dummyRouter,
+      blockchainRouter: dummyRouter,
       errorMiddleware: dummyErrorMiddleware,
     });
   });
