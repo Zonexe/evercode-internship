@@ -21,6 +21,10 @@ export class App {
   private readonly authMiddleware: RequestHandler;
   private readonly currencyRouter: Router;
   private readonly priceRouter: Router;
+
+  private readonly addressRouter: Router;
+  private readonly blockchainRouter: Router;
+
   private readonly errorMiddleware: ErrorRequestHandler;
 
   constructor({
@@ -29,6 +33,9 @@ export class App {
     authMiddleware,
     currencyRouter,
     priceRouter,
+    addressRouter,
+    blockchainRouter,
+
     errorMiddleware,
   }: {
     logger: ILogger;
@@ -36,6 +43,9 @@ export class App {
     authMiddleware: RequestHandler;
     currencyRouter: Router;
     priceRouter: Router;
+    addressRouter: Router;
+    blockchainRouter: Router;
+
     errorMiddleware: ErrorRequestHandler;
   }) {
     this.logger = logger;
@@ -43,6 +53,10 @@ export class App {
     this.authMiddleware = authMiddleware;
     this.currencyRouter = currencyRouter;
     this.priceRouter = priceRouter;
+
+    this.addressRouter = addressRouter;
+    this.blockchainRouter = blockchainRouter;
+
     this.errorMiddleware = errorMiddleware;
 
     this.expressApp = express();
@@ -91,6 +105,9 @@ export class App {
 
     this.expressApp.use("/currencies", this.currencyRouter);
     this.expressApp.use("/price", this.priceRouter);
+
+    this.expressApp.use("/addresses", this.addressRouter);
+    this.expressApp.use("/blockchain", this.blockchainRouter);
 
     this.expressApp.use(this.errorMiddleware);
   }

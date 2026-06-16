@@ -31,6 +31,16 @@ import { createPriceRouter } from "./price/priceRouter";
 import { IPriceRepository } from "./price/price.types";
 import { SqlitePriceRepository } from "./price/sqlitePriceRepository";
 
+import { IAddressRepository } from "./addresses/address.types";
+import { SqliteAddressRepository } from "./addresses/sqliteAddressRepository";
+import { AddressController } from "./addresses/addressController";
+import { createAddressRouter } from "./addresses/addressRouter";
+
+import { IBlockcypherService } from "./blockchain/blockcypher.types";
+import { BlockcypherService } from "./blockchain/blockcypherService";
+import { BlockchainController } from "./blockchain/blockchainController";
+import { createBlockchainRouter } from "./blockchain/blockchainRouter";
+
 export interface AppCradle {
   config: typeof config;
   logger: ILogger;
@@ -50,6 +60,14 @@ export interface AppCradle {
   binanceService: IBinanceService;
   priceController: PriceController;
   priceRouter: Router;
+
+  addressRepository: IAddressRepository;
+  addressController: AddressController;
+  addressRouter: Router;
+
+  blockcypherService: IBlockcypherService;
+  blockchainController: BlockchainController;
+  blockchainRouter: Router;
 
   errorMiddleware: ErrorRequestHandler;
 
@@ -88,6 +106,14 @@ container.register({
   binanceService: asClass(BinanceHttpService).singleton(),
   priceController: asClass(PriceController).singleton(),
   priceRouter: asFunction(createPriceRouter).singleton(),
+
+  addressRepository: asClass(SqliteAddressRepository).singleton(),
+  addressController: asClass(AddressController).singleton(),
+  addressRouter: asFunction(createAddressRouter).singleton(),
+
+  blockcypherService: asClass(BlockcypherService).singleton(),
+  blockchainController: asClass(BlockchainController).singleton(),
+  blockchainRouter: asFunction(createBlockchainRouter).singleton(),
 
   errorMiddleware: asFunction((c) =>
     createErrorMiddleware(c.logger),
