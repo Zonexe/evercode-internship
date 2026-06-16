@@ -23,6 +23,15 @@ function initDb(): void {
         price TEXT NOT NULL,
         FOREIGN KEY(currency_id) REFERENCES currencies(id) ON DELETE CASCADE
       );
+
+      CREATE TABLE IF NOT EXISTS addresses (
+        id TEXT PRIMARY KEY,
+        address TEXT NOT NULL UNIQUE,
+        label TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL  
+      );
+
     `);
 
     console.log(
