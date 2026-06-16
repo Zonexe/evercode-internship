@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Evercode Internship Currency API
-  description: API для управления списком валют и демонстрации работы архитектурных слоев Express + Awilix.
+  description: API для управления списком валют, отслеживаемыми биткоин-адресами и демонстрации работы архитектурных слоев Express + Awilix.
   version: 1.0.0
 
 servers:
@@ -194,6 +194,169 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /addresses:
+    get:
+      summary: Получить список всех отслеживаемых адресов
+      description: Возвращает список всех крипто-кошельков, сохраненных в нашей локальной СУБД SQLite.
+      responses:
+        "200":
+          description: Список адресов успешно получен
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Address"
+        "403":
+          $ref: "#/components/responses/403Forbidden"
+
+    post:
+      summary: Добавить крипто-адрес в список отслеживания
+      description: Сохраняет новый адрес Биткоина в SQLite СУБД с метаданными.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAddressDto"
+      responses:
+        "201":
+          description: Адрес успешно сохранен в БД
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Address"
+        "400":
+          $ref: "#/components/responses/400BadRequest"
+        "403":
+          $ref: "#/components/responses/403Forbidden"
+        "409":
+          description: Конфликт — этот Биткоин-адрес уже отслеживается в базе
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /addresses/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: Уникальный UUID записи адреса
+        schema:
+          type: string
+          format: uuid
+
+    get:
+      summary: Получить отслеживаемый адрес по его ID
+      responses:
+        "200":
+          description: Адрес успешно найден
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Address"
+        "403":
+          $ref: "#/components/responses/403Forbidden"
+        "404":
+          $ref: "#/components/responses/404NotFound"
+
+    put:
+      summary: Обновить параметры отслеживаемого адреса
+      description: Позволяет изменить Биткоин-адрес или его ярлык (label).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateAddressDto"
+      responses:
+        "200":
+          description: Адрес успешно обновлен
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Address"
+        "400":
+          $ref: "#/components/responses/400BadRequest"
+        "403":
+          $ref: "#/components/responses/403Forbidden"
+        "404":
+          $ref: "#/components/responses/404NotFound"
+        "409":
+          description: Конфликт — данный Биткоин-адрес уже занят другой записью
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    delete:
+      summary: Удалить адрес из списка отслеживания по его ID
+      responses:
+        "204":
+          description: Адрес успешно удален
+        "403":
+          $ref: "#/components/responses/403Forbidden"
+        "404":
+          $ref: "#/components/responses/404NotFound"
+
+  /addresses/{address}/balance:
+    parameters:
+      - name: address
+        in: path
+        required: true
+        description: Криптографический Биткоин-адрес в формате Base58 или Bech32
+        schema:
+          type: string
+          example: 1DEP8i3QJCsomS4BSMY2RpU1upv62aGvhD
+
+    get:
+      summary: Получить живой баланс адреса в реальном времени напрямую из сети
+      description: Запрашивает баланс с помощью Blockcypher API. Данные не сохраняются в СУБД SQLite.
+      responses:
+        "200":
+          description: Баланс успешно получен. Все суммы возвращены в сатоши.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AddressBalance"
+        "403":
+          $ref: "#/components/responses/403Forbidden"
+        "404":
+          $ref: "#/components/responses/404NotFound"
+        "502":
+          description: Ошибка внешнего провайдера (сервис Blockcypher недоступен после ретраев)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /blockchain/height:
+    get:
+      summary: Получить текущую высоту сети Биткоина
+      description: Запрашивает номер последнего смайненного блока напрямую у Blockcypher API.
+      responses:
+        "200":
+          description: Высота сети успешно получена
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - height
+                properties:
+                  height:
+                    type: integer
+                    example: 850000
+        "403":
+          $ref: "#/components/responses/403Forbidden"
+        "502":
+          description: Ошибка внешнего провайдера (сервис Blockcypher недоступен после ретраев)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   securitySchemes:
     BearerAuth:
@@ -242,6 +405,86 @@ components:
         ticker:
           type: string
           example: EURC
+
+    Address:
+      type: object
+      required:
+        - id
+        - address
+        - label
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d
+        address:
+          type: string
+          example: 1DEP8i3QJCsomS4BSMY2RpU1upv62aGvhD
+        label:
+          type: string
+          example: Мой холодный кошелек
+        createdAt:
+          type: string
+          format: date-time
+          example: "2026-06-16T14:44:00.000Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2026-06-16T14:44:00.000Z"
+
+    CreateAddressDto:
+      type: object
+      required:
+        - address
+        - label
+      properties:
+        address:
+          type: string
+          example: 1DEP8i3QJCsomS4BSMY2RpU1upv62aGvhD
+        label:
+          type: string
+          example: Мой холодный кошелек
+
+    UpdateAddressDto:
+      type: object
+      properties:
+        address:
+          type: string
+          example: 1DEP8i3QJCsomS4BSMY2RpU1upv62aGvhD
+        label:
+          type: string
+          example: Новый ярлык кошелька
+
+    AddressBalance:
+      type: object
+      required:
+        - address
+        - balance
+        - finalBalance
+        - totalReceived
+        - totalSent
+      properties:
+        address:
+          type: string
+          example: 1DEP8i3QJCsomS4BSMY2RpU1upv62aGvhD
+        balance:
+          type: integer
+          description: Подтвержденный баланс в сатоши
+          example: 4433416
+        finalBalance:
+          type: integer
+          description: Суммарный подтвержденный + неподтвержденный баланс в сатоши
+          example: 4433416
+        totalReceived:
+          type: integer
+          description: Общая полученная сумма за всё время в сатоши
+          example: 4433416
+        totalSent:
+          type: integer
+          description: Общая отправленная сумма за всё время в сатоши
+          example: 0
 
     ErrorResponse:
       type: object
