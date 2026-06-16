@@ -1,3 +1,4 @@
+import http from "node:http";
 import express, {
   Application,
   Request,
@@ -94,10 +95,13 @@ export class App {
     this.expressApp.use(this.errorMiddleware);
   }
 
-  public start(): void {
+  public start(): http.Server {
     const port = this.config.port;
-    this.expressApp.listen(port, () => {
+
+    const server = this.expressApp.listen(port, () => {
       this.logger.info(`HTTP-сервер успешно запущен на порту ${port}`);
     });
+
+    return server;
   }
 }
