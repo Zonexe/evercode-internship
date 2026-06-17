@@ -1,0 +1,16 @@
+services:
+  app:
+    build: .
+
+    ports:
+      - "3000:3000"
+
+    environment:
+      - PORT=3000
+      - API_TOKEN=${API_TOKEN}
+      - DB_PATH=/app/data/currencies.db
+
+    volumes:
+      - ./data:/app/data
+
+    restart: unless-stopped
