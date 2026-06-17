@@ -4,8 +4,12 @@ dist/
 
 .env
 
+data/
+
+coverage/
+
+*.log
+
 .vscode/
 
 Thumbs.db
-
-data/
