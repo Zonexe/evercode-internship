@@ -63,8 +63,6 @@ describe("Price API (Integration & Unit)", () => {
       authMiddleware,
       currencyRouter: express.Router(),
       priceRouter,
-      addressRouter: express.Router(),
-      blockchainRouter: express.Router(),
       errorMiddleware: dummyErrorMiddleware,
     });
   });

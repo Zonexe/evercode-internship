@@ -46,8 +46,6 @@ describe("Currency API (Integration)", () => {
       authMiddleware,
       currencyRouter,
       priceRouter: express.Router(),
-      addressRouter: express.Router(),
-      blockchainRouter: express.Router(),
       errorMiddleware: dummyErrorMiddleware,
     });
   });
