@@ -2,46 +2,83 @@ import { DatabaseSync, StatementSync } from "node:sqlite";
 import crypto from "crypto";
 import { Price, IPriceRepository } from "./price.types";
 
+interface PriceRow {
+  id: string;
+  currency_id: string;
+  price: string;
+  recorded_at: string;
+}
+
+function mapPrice(row: PriceRow): Price {
+  return {
+    id: row.id,
+    currencyId: row.currency_id,
+    price: row.price,
+    recordedAt: row.recorded_at,
+  };
+}
+
 export class SqlitePriceRepository implements IPriceRepository {
   private readonly db: DatabaseSync;
   private readonly saveStmt: StatementSync;
-  private readonly getByTickerStmt: StatementSync;
+  private readonly getLatestStmt: StatementSync;
+  private readonly getHistoryStmt: StatementSync;
 
   constructor({ database }: { database: DatabaseSync }) {
     this.db = database;
 
     this.saveStmt = this.db.prepare(`
-      INSERT INTO prices (id, currency_id, symbol, price)
+      INSERT INTO price_history (
+        id,
+        currency_id,
+        price,
+        recorded_at
+      )
       VALUES (?, ?, ?, ?)
-      ON CONFLICT(symbol) DO UPDATE SET price = excluded.price
     `);
 
-    this.getByTickerStmt = this.db.prepare(`
-      SELECT p.* FROM prices p
-      JOIN currencies c ON p.currency_id = c.id
+    this.getLatestStmt = this.db.prepare(`
+      SELECT *
+      FROM price_history
+      WHERE currency_id = ?
+      ORDER BY recorded_at DESC
+      LIMIT 1
+    `);
+
+    this.getHistoryStmt = this.db.prepare(`
+      SELECT ph.*
+      FROM price_history ph
+      JOIN currencies c ON ph.currency_id = c.id
       WHERE UPPER(c.ticker) = UPPER(?)
+      ORDER BY ph.recorded_at DESC
+      LIMIT ?
     `);
   }
 
-  public savePrices(
+  public savePrice(
     currencyId: string,
-    prices: { symbol: string; price: string }[],
+    price: string,
+    recordedAt: string,
   ): void {
-    this.db.exec("BEGIN TRANSACTION;");
-    try {
-      for (const item of prices) {
-        const id = crypto.randomUUID();
-        this.saveStmt.run(id, currencyId, item.symbol, item.price);
-      }
-      this.db.exec("COMMIT;");
-    } catch (error) {
-      this.db.exec("ROLLBACK;");
-      throw error;
-    }
+    const id = crypto.randomUUID();
+
+    this.saveStmt.run(id, currencyId, price, recordedAt);
   }
 
-  public getPricesByTicker(ticker: string): Price[] {
-    const rows = this.getByTickerStmt.all(ticker);
-    return rows as unknown as Price[];
+  public getLatestPrice(currencyId: string): Price | undefined {
+    const row = this.getLatestStmt.get(currencyId) as unknown as
+      | PriceRow
+      | undefined;
+
+    return row ? mapPrice(row) : undefined;
+  }
+
+  public getHistoryByTicker(ticker: string, limit = 100): Price[] {
+    const rows = this.getHistoryStmt.all(
+      ticker,
+      limit,
+    ) as unknown as PriceRow[];
+
+    return rows.map(mapPrice);
   }
 }
