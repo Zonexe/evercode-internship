@@ -5,10 +5,12 @@ interface AppConfig {
   version: string;
   port: number;
   apiToken: string;
+  coinMarketCapApiKey: string;
   dbPath: string;
 }
 
 const rawApiToken = process.env.API_TOKEN;
+const coinMarketCapApiKey = process.env.COINMARKETCAP_API_KEY;
 
 if (!rawApiToken) {
   throw new Error(
@@ -22,16 +24,25 @@ if (rawApiToken.length !== 64) {
   );
 }
 
+if (!coinMarketCapApiKey) {
+  throw new Error(
+    "Критическая ошибка конфигурации: Переменная окружения COINMARKETCAP_API_KEY не задана.",
+  );
+}
+
 const parsePort = (rawPort: string | undefined): number => {
   if (rawPort === undefined) {
     return 3000;
   }
+
   const parsed = parseInt(rawPort, 10);
+
   if (isNaN(parsed) || parsed < 0 || parsed > 65535) {
     throw new Error(
       `Критическая ошибка конфигурации: Недопустимый порт "${rawPort}".`,
     );
   }
+
   return parsed;
 };
 
@@ -40,5 +51,6 @@ export const config: Readonly<AppConfig> = Object.freeze({
   version: process.env.APP_VERSION || "1.0.0",
   port: parsePort(process.env.PORT),
   apiToken: rawApiToken,
+  coinMarketCapApiKey,
   dbPath: process.env.DB_PATH || "./data/currencies.db",
 });
