@@ -14,52 +14,19 @@ scheduler.startTask("UpdatePricesTask", 60000, updatePricesTask);
 
 let isShuttingDown = false;
 
-const gracefulShutdown = (signal: string): void => {
+const gracefulShutdown = async (signal: string): Promise<void> => {
   if (isShuttingDown) {
     logger.warn(
       `Повторный сигнал ${signal} проигнорирован, закрытие уже выполняется.`,
     );
     return;
   }
+
   isShuttingDown = true;
 
   logger.info(
     `Получен сигнал ${signal}. Начинаем процедуру Graceful Shutdown...`,
   );
-
-  try {
-    scheduler.stopAll();
-    logger.info("Планировщик задач успешно остановлен.");
-  } catch (err) {
-    logger.error("Ошибка при остановке планировщика задач:", {
-      context: { error: err instanceof Error ? err.message : String(err) },
-    });
-  }
-
-  server.close((serverErr) => {
-    if (serverErr) {
-      logger.error("Ошибка при закрытии HTTP-сервера:", {
-        context: { error: serverErr.message },
-      });
-      process.exit(1);
-    }
-    logger.info("HTTP-сервер успешно остановлен.");
-
-    try {
-      database.close();
-      logger.info("Соединение с базой данных успешно закрыто.");
-
-      process.exit(0);
-    } catch (dbErr) {
-      logger.error("Ошибка при закрытии базы данных:", {
-        context: {
-          error: dbErr instanceof Error ? dbErr.message : String(dbErr),
-        },
-      });
-
-      process.exit(1);
-    }
-  });
 
   const timeoutId = setTimeout(() => {
     logger.error(
@@ -69,7 +36,66 @@ const gracefulShutdown = (signal: string): void => {
   }, 10000);
 
   timeoutId.unref();
+
+  let exitCode = 0;
+
+  try {
+    await scheduler.stopAll();
+    logger.info("Планировщик задач остановлен.");
+  } catch (error) {
+    exitCode = 1;
+
+    logger.error("Ошибка при остановке планировщика задач.", {
+      context: {
+        error: error instanceof Error ? error.message : String(error),
+      },
+    });
+  }
+
+  try {
+    await new Promise<void>((resolve, reject) => {
+      server.close((error?: Error) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+
+        resolve();
+      });
+    });
+
+    logger.info("HTTP-сервер успешно остановлен.");
+  } catch (error) {
+    exitCode = 1;
+
+    logger.error("Ошибка при закрытии HTTP-сервера.", {
+      context: {
+        error: error instanceof Error ? error.message : String(error),
+      },
+    });
+  }
+
+  try {
+    database.close();
+    logger.info("Соединение с базой данных успешно закрыто.");
+  } catch (error) {
+    exitCode = 1;
+
+    logger.error("Ошибка при закрытии базы данных.", {
+      context: {
+        error: error instanceof Error ? error.message : String(error),
+      },
+    });
+  }
+
+  clearTimeout(timeoutId);
+  process.exitCode = exitCode;
 };
 
-process.on("SIGINT", () => gracefulShutdown("SIGINT"));
-process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+process.on("SIGINT", () => {
+  void gracefulShutdown("SIGINT");
+});
+
+process.on("SIGTERM", () => {
+  void gracefulShutdown("SIGTERM");
+});
