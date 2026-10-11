@@ -10,12 +10,17 @@ describe("SqliteCurrencyRepository (Integration Tests)", () => {
     testDb = new DatabaseSync(":memory:");
 
     testDb.exec(`
-      CREATE TABLE IF NOT EXISTS currencies (
+      PRAGMA foreign_keys = ON;
+
+      CREATE TABLE currencies (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
-        ticker TEXT NOT NULL UNIQUE
+        ticker TEXT NOT NULL UNIQUE,
+        is_tracked INTEGER NOT NULL DEFAULT 0,
+        last_updated TEXT
       );
     `);
+
     repository = new SqliteCurrencyRepository({ database: testDb });
   });
 
@@ -23,96 +28,200 @@ describe("SqliteCurrencyRepository (Integration Tests)", () => {
     testDb.close();
   });
 
-  it("должен успешно создать валюту и найти её по ID", () => {
-    const created = repository.create({ name: "Bitcoin", ticker: "BTC" });
+  it("должен создать валюту и найти её по ID", () => {
+    const created = repository.create({
+      name: "Bitcoin",
+      ticker: "BTC",
+    });
 
     expect(created.id).toBeDefined();
     expect(typeof created.id).toBe("string");
     expect(created.name).toBe("Bitcoin");
-
     expect(created.ticker).toBe("BTC");
+    expect(created.isTracked).toBe(false);
+    expect(created.lastUpdated).toBeNull();
 
-    const found = repository.findById(created.id);
-    expect(found).toEqual(created);
+    expect(repository.findById(created.id)).toEqual(created);
   });
 
   it("должен вернуть undefined при поиске несуществующего ID", () => {
-    const found = repository.findById("non-existent-uuid");
-    expect(found).toBeUndefined();
+    expect(repository.findById("non-existent-uuid")).toBeUndefined();
   });
 
-  it("должен возвращать все созданные записи через findAll", () => {
-    const currency1 = repository.create({ name: "Bitcoin", ticker: "BTC" });
-    const currency2 = repository.create({ name: "Ethereum", ticker: "ETH" });
+  it("должен вернуть все созданные записи через findAll", () => {
+    const bitcoin = repository.create({ name: "Bitcoin", ticker: "BTC" });
+    const ethereum = repository.create({ name: "Ethereum", ticker: "ETH" });
 
     const all = repository.findAll();
 
     expect(all).toHaveLength(2);
-    expect(all).toContainEqual(currency1);
-    expect(all).toContainEqual(currency2);
+    expect(all).toContainEqual(bitcoin);
+    expect(all).toContainEqual(ethereum);
   });
 
-  it("должен успешно находить валюту по тикеру без учета регистра символов", () => {
-    const created = repository.create({ name: "US Dollar", ticker: "USD" });
+  it("должен сортировать валюты по имени через findAll", () => {
+    repository.create({ name: "Ethereum", ticker: "ETH" });
+    repository.create({ name: "Bitcoin", ticker: "BTC" });
+    repository.create({ name: "Cardano", ticker: "ADA" });
 
-    const foundExact = repository.findByTicker("USD");
-    expect(foundExact).toEqual(created);
+    const all = repository.findAll();
 
-    const foundLower = repository.findByTicker("usd");
-    expect(foundLower).toEqual(created);
-
-    const foundMixed = repository.findByTicker("uSd");
-    expect(foundMixed).toEqual(created);
+    expect(all.map((currency) => currency.name)).toEqual([
+      "Bitcoin",
+      "Cardano",
+      "Ethereum",
+    ]);
   });
 
-  it("должен возвращать undefined, если тикер не зарегистрирован", () => {
-    const found = repository.findByTicker("NOT_EXIST");
-    expect(found).toBeUndefined();
+  it("должен находить валюту по тикеру без учета регистра", () => {
+    const created = repository.create({ name: "Bitcoin", ticker: "BTC" });
+
+    expect(repository.findByTicker("BTC")).toEqual(created);
+    expect(repository.findByTicker("btc")).toEqual(created);
+    expect(repository.findByTicker("bTc")).toEqual(created);
   });
 
-  it("должен успешно обновить переданные поля (name и ticker) существующей валюты", () => {
+  it("должен вернуть undefined, если тикер не зарегистрирован", () => {
+    expect(repository.findByTicker("NOT_EXIST")).toBeUndefined();
+  });
+
+  it("должен сохранять тикер в верхнем регистре", () => {
+    const created = repository.create({
+      name: "Bitcoin",
+      ticker: "btc",
+    });
+
+    expect(created.ticker).toBe("BTC");
+    expect(repository.findById(created.id)?.ticker).toBe("BTC");
+  });
+
+  it("должен обновить имя и тикер существующей валюты", () => {
     const created = repository.create({ name: "Bitcoin", ticker: "BTC" });
 
     const updated = repository.update(created.id, {
       name: "Bitcoin Cash",
+      ticker: "bch",
+    });
+
+    expect(updated).toEqual({
+      ...created,
+      name: "Bitcoin Cash",
       ticker: "BCH",
     });
 
-    expect(updated).toBeDefined();
-    expect(updated?.id).toBe(created.id);
-    expect(updated?.name).toBe("Bitcoin Cash");
-    expect(updated?.ticker).toBe("BCH");
-
-    const found = repository.findById(created.id);
-    expect(found).toEqual(updated);
+    expect(repository.findById(created.id)).toEqual(updated);
   });
 
-  it("должен частично обновить только name, сохранив старый ticker", () => {
+  it("должен частично обновить имя, сохранив прежний тикер", () => {
     const created = repository.create({ name: "Bitcoin", ticker: "BTC" });
 
-    const updated = repository.update(created.id, { name: "Wrapped Bitcoin" });
+    const updated = repository.update(created.id, {
+      name: "Wrapped Bitcoin",
+    });
 
     expect(updated?.name).toBe("Wrapped Bitcoin");
     expect(updated?.ticker).toBe("BTC");
   });
 
-  it("должен вернуть undefined при попытке обновить несуществующую валюту", () => {
-    const result = repository.update("invalid-id", { name: "New Name" });
-    expect(result).toBeUndefined();
-  });
-
-  it("должен удалить существующую валюту и вернуть true", () => {
+  it("должен частично обновить тикер, сохранив прежнее имя", () => {
     const created = repository.create({ name: "Bitcoin", ticker: "BTC" });
 
-    const isDeleted = repository.delete(created.id);
-    expect(isDeleted).toBe(true);
+    const updated = repository.update(created.id, { ticker: "xbt" });
 
-    const found = repository.findById(created.id);
-    expect(found).toBeUndefined();
+    expect(updated?.name).toBe("Bitcoin");
+    expect(updated?.ticker).toBe("XBT");
   });
 
-  it("должен вернуть false при попытке удалить несуществующую валюту", () => {
-    const isDeleted = repository.delete("non-existent-id");
-    expect(isDeleted).toBe(false);
+  it("должен вернуть undefined при обновлении несуществующей валюты", () => {
+    expect(
+      repository.update("invalid-id", { name: "New Name" }),
+    ).toBeUndefined();
+  });
+
+  it("должен удалять существующую валюту", () => {
+    const created = repository.create({ name: "Bitcoin", ticker: "BTC" });
+
+    expect(repository.delete(created.id)).toBe(true);
+    expect(repository.findById(created.id)).toBeUndefined();
+  });
+
+  it("должен вернуть false при удалении несуществующей валюты", () => {
+    expect(repository.delete("non-existent-id")).toBe(false);
+  });
+
+  it("должен возвращать только отслеживаемые валюты", () => {
+    const bitcoin = repository.create({ name: "Bitcoin", ticker: "BTC" });
+    const ethereum = repository.create({ name: "Ethereum", ticker: "ETH" });
+    repository.create({ name: "Cardano", ticker: "ADA" });
+
+    repository.setTracked(bitcoin.id, true);
+    repository.setTracked(ethereum.id, true);
+
+    const tracked = repository.findTracked();
+
+    expect(tracked).toHaveLength(2);
+    expect(tracked.map((currency) => currency.ticker)).toEqual(["BTC", "ETH"]);
+    expect(tracked.every((currency) => currency.isTracked)).toBe(true);
+  });
+
+  it("должен возвращать отслеживаемые валюты в алфавитном порядке", () => {
+    const ethereum = repository.create({ name: "Ethereum", ticker: "ETH" });
+    const bitcoin = repository.create({ name: "Bitcoin", ticker: "BTC" });
+
+    repository.setTracked(ethereum.id, true);
+    repository.setTracked(bitcoin.id, true);
+
+    expect(repository.findTracked().map((currency) => currency.name)).toEqual([
+      "Bitcoin",
+      "Ethereum",
+    ]);
+  });
+
+  it("должен включать отслеживание валюты", () => {
+    const created = repository.create({ name: "Bitcoin", ticker: "BTC" });
+    const timestamp = "2026-10-08T12:00:00.000Z";
+
+    const updated = repository.setTracked(created.id, true, timestamp);
+
+    expect(updated).toEqual({
+      ...created,
+      isTracked: true,
+      lastUpdated: timestamp,
+    });
+
+    expect(repository.findById(created.id)).toEqual(updated);
+  });
+
+  it("должен отключать отслеживание валюты", () => {
+    const created = repository.create({ name: "Bitcoin", ticker: "BTC" });
+
+    repository.setTracked(created.id, true, "2026-10-08T12:00:00.000Z");
+
+    const updated = repository.setTracked(created.id, false);
+
+    expect(updated?.isTracked).toBe(false);
+    expect(updated?.lastUpdated).toBe("2026-10-08T12:00:00.000Z");
+  });
+
+  it("должен сохранять lastUpdated, если новая дата не передана", () => {
+    const created = repository.create({ name: "Bitcoin", ticker: "BTC" });
+    const timestamp = "2026-10-08T12:00:00.000Z";
+
+    repository.setTracked(created.id, true, timestamp);
+    const updated = repository.setTracked(created.id, true);
+
+    expect(updated?.lastUpdated).toBe(timestamp);
+  });
+
+  it("должен вернуть undefined при изменении отслеживания несуществующей валюты", () => {
+    expect(repository.setTracked("invalid-id", true)).toBeUndefined();
+  });
+
+  it("должен отклонить создание валюты с повторяющимся тикером", () => {
+    repository.create({ name: "Bitcoin", ticker: "BTC" });
+
+    expect(() =>
+      repository.create({ name: "Another Bitcoin", ticker: "btc" }),
+    ).toThrow();
   });
 });

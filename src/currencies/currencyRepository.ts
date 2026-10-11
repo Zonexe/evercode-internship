@@ -15,9 +15,11 @@ export class InMemoryCurrencyRepository implements ICurrencyRepository {
 
   public findById(id: string): Currency | undefined {
     const currency = this.store.get(id);
+
     if (!currency) {
       return undefined;
     }
+
     return { ...currency };
   }
 
@@ -29,6 +31,7 @@ export class InMemoryCurrencyRepository implements ICurrencyRepository {
         return { ...currency };
       }
     }
+
     return undefined;
   }
 
@@ -39,6 +42,8 @@ export class InMemoryCurrencyRepository implements ICurrencyRepository {
       id,
       name: dto.name,
       ticker: dto.ticker.toUpperCase(),
+      isTracked: false,
+      lastUpdated: null,
     };
 
     this.store.set(id, newCurrency);
@@ -48,6 +53,7 @@ export class InMemoryCurrencyRepository implements ICurrencyRepository {
 
   public update(id: string, dto: UpdateCurrencyDto): Currency | undefined {
     const existing = this.store.get(id);
+
     if (!existing) {
       return undefined;
     }
@@ -66,5 +72,34 @@ export class InMemoryCurrencyRepository implements ICurrencyRepository {
 
   public delete(id: string): boolean {
     return this.store.delete(id);
+  }
+
+  public findTracked(): Currency[] {
+    return Array.from(this.store.values())
+      .filter((currency) => currency.isTracked)
+      .map((currency) => ({ ...currency }));
+  }
+
+  public setTracked(
+    id: string,
+    isTracked: boolean,
+    lastUpdated?: string,
+  ): Currency | undefined {
+    const existing = this.store.get(id);
+
+    if (!existing) {
+      return undefined;
+    }
+
+    const updatedCurrency: Currency = {
+      ...existing,
+      isTracked,
+      lastUpdated:
+        lastUpdated !== undefined ? lastUpdated : existing.lastUpdated,
+    };
+
+    this.store.set(id, updatedCurrency);
+
+    return { ...updatedCurrency };
   }
 }
