@@ -18,9 +18,24 @@ describe("Price API (Integration & Unit)", () => {
   const validToken = config.apiToken;
 
   const dummyPrices: Price[] = [
-    { id: "p1", currencyId: "cur-1", symbol: "BTCUSDT", price: "75000.00" },
-    { id: "p2", currencyId: "cur-1", symbol: "BTCEUR", price: "65000.00" },
-    { id: "p3", currencyId: "cur-1", symbol: "ETHBTC", price: "0.027" },
+    {
+      id: "p1",
+      currencyId: "cur-1",
+      price: "75000.00",
+      recordedAt: "2026-10-07T10:00:00.000Z",
+    },
+    {
+      id: "p2",
+      currencyId: "cur-1",
+      price: "76000.00",
+      recordedAt: "2026-10-07T11:00:00.000Z",
+    },
+    {
+      id: "p3",
+      currencyId: "cur-1",
+      price: "75500.00",
+      recordedAt: "2026-10-07T12:00:00.000Z",
+    },
   ];
 
   beforeEach(() => {
@@ -35,9 +50,10 @@ describe("Price API (Integration & Unit)", () => {
     repository = new InMemoryCurrencyRepository();
 
     mockPriceRepository = {
-      savePrices: jest.fn(),
-      getPricesByTicker: jest.fn<() => Price[]>(),
-    } as unknown as jest.Mocked<IPriceRepository>;
+      savePrice: jest.fn(),
+      getLatestPrice: jest.fn(),
+      getHistoryByTicker: jest.fn(),
+    };
 
     const priceController = new PriceController({
       currencyRepository: repository,
@@ -54,12 +70,14 @@ describe("Price API (Integration & Unit)", () => {
       res,
       next,
     ) => {
-      res.status(err.statusCode || 500).json({ error: err.message });
+      res.status(err.statusCode || 500).json({
+        error: err.message,
+      });
     };
 
     appInstance = new App({
       logger: loggerMock,
-      config: config,
+      config,
       authMiddleware,
       currencyRouter: express.Router(),
       priceRouter,
@@ -78,7 +96,7 @@ describe("Price API (Integration & Unit)", () => {
     });
   });
 
-  describe("Валидация входящих параметров (Validation)", () => {
+  describe("GET /price - Валидация входящих параметров (Validation)", () => {
     it("должен вернуть 400 Bad Request, если параметр currency не передан", async () => {
       const response = await request(appInstance.expressApp)
         .get("/price")
@@ -98,7 +116,7 @@ describe("Price API (Integration & Unit)", () => {
     });
   });
 
-  describe("Бизнес-логика (Business Logic)", () => {
+  describe("GET /price - Бизнес-логика (Business Logic)", () => {
     it("должен вернуть 404 Not Found, если валюта отсутствует в нашей БД", async () => {
       const response = await request(appInstance.expressApp)
         .get("/price")
@@ -107,12 +125,17 @@ describe("Price API (Integration & Unit)", () => {
 
       expect(response.status).toBe(404);
       expect(response.body.error).toContain("отсутствует в реестре");
+
+      expect(mockPriceRepository.getHistoryByTicker).not.toHaveBeenCalled();
     });
 
-    it("должен успешно вернуть 200 и сохраненные торговые пары из локальной БД", async () => {
-      repository.create({ name: "Bitcoin", ticker: "BTC" });
+    it("должен успешно вернуть 200 и историю цен существующей криптовалюты", async () => {
+      repository.create({
+        name: "Bitcoin",
+        ticker: "BTC",
+      });
 
-      mockPriceRepository.getPricesByTicker.mockReturnValue(dummyPrices);
+      mockPriceRepository.getHistoryByTicker.mockReturnValue(dummyPrices);
 
       const response = await request(appInstance.expressApp)
         .get("/price")
@@ -122,12 +145,21 @@ describe("Price API (Integration & Unit)", () => {
       expect(response.status).toBe(200);
       expect(response.body).toHaveLength(3);
       expect(response.body).toEqual(dummyPrices);
+
+      expect(mockPriceRepository.getHistoryByTicker).toHaveBeenCalledTimes(1);
+
+      expect(mockPriceRepository.getHistoryByTicker).toHaveBeenCalledWith(
+        "BTC",
+      );
     });
 
-    it("должен вернуть 200 и пустой массив, если в СУБД нет сохраненных цен для существующей валюты", async () => {
-      repository.create({ name: "MyCoin", ticker: "MYCOIN" });
+    it("должен вернуть 200 и пустой массив, если в БД нет истории цен", async () => {
+      repository.create({
+        name: "MyCoin",
+        ticker: "MYCOIN",
+      });
 
-      mockPriceRepository.getPricesByTicker.mockReturnValue([]);
+      mockPriceRepository.getHistoryByTicker.mockReturnValue([]);
 
       const response = await request(appInstance.expressApp)
         .get("/price")
@@ -136,12 +168,19 @@ describe("Price API (Integration & Unit)", () => {
 
       expect(response.status).toBe(200);
       expect(response.body).toEqual([]);
+
+      expect(mockPriceRepository.getHistoryByTicker).toHaveBeenCalledWith(
+        "MYCOIN",
+      );
     });
 
     it("должен вернуть 500 Internal Server Error, если репозиторий выбросил ошибку чтения из БД", async () => {
-      repository.create({ name: "Bitcoin", ticker: "BTC" });
+      repository.create({
+        name: "Bitcoin",
+        ticker: "BTC",
+      });
 
-      mockPriceRepository.getPricesByTicker.mockImplementation(() => {
+      mockPriceRepository.getHistoryByTicker.mockImplementation(() => {
         throw new Error("Сбой дисковой подсистемы СУБД");
       });
 
@@ -152,6 +191,58 @@ describe("Price API (Integration & Unit)", () => {
 
       expect(response.status).toBe(500);
       expect(response.body.error).toContain("Сбой дисковой подсистемы");
+    });
+  });
+
+  describe("GET /price/latest - Текущая цена", () => {
+    it("должен вернуть 400 Bad Request, если параметр currency не передан", async () => {
+      const response = await request(appInstance.expressApp)
+        .get("/price/latest")
+        .set("Authorization", `Bearer ${validToken}`);
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toContain("currency");
+    });
+
+    it("должен вернуть 404 Not Found, если валюта отсутствует в БД", async () => {
+      const response = await request(appInstance.expressApp)
+        .get("/price/latest")
+        .set("Authorization", `Bearer ${validToken}`)
+        .query({ currency: "UNKNOWN" });
+
+      expect(response.status).toBe(404);
+      expect(response.body.error).toContain("отсутствует в реестре");
+    });
+
+    it("должен вернуть 404, если цена для валюты еще не синхронизирована", async () => {
+      repository.create({ name: "Bitcoin", ticker: "BTC" });
+      mockPriceRepository.getLatestPrice.mockReturnValue(undefined);
+
+      const response = await request(appInstance.expressApp)
+        .get("/price/latest")
+        .set("Authorization", `Bearer ${validToken}`)
+        .query({ currency: "BTC" });
+
+      expect(response.status).toBe(404);
+      expect(response.body.error).toContain("пока нет сохраненных цен");
+    });
+
+    it("должен вернуть 200 и объект цены при успешном запросе", async () => {
+      const currency = repository.create({ name: "Bitcoin", ticker: "BTC" });
+      mockPriceRepository.getLatestPrice.mockReturnValue(dummyPrices[1]);
+
+      const response = await request(appInstance.expressApp)
+        .get("/price/latest")
+        .set("Authorization", `Bearer ${validToken}`)
+        .query({ currency: "BTC" });
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual(dummyPrices[1]);
+
+      expect(mockPriceRepository.getLatestPrice).toHaveBeenCalledTimes(1);
+      expect(mockPriceRepository.getLatestPrice).toHaveBeenCalledWith(
+        currency.id,
+      );
     });
   });
 });
