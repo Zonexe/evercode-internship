@@ -87,7 +87,13 @@ container.register({
 
   priceRepository: asClass(SqlitePriceRepository).singleton(),
 
-  coinMarketCapService: asClass(CoinMarketCapHttpService).singleton(),
+  coinMarketCapService: asFunction(
+    (c) =>
+      new CoinMarketCapHttpService({
+        logger: c.logger,
+        apiKey: c.config.coinMarketCapApiKey,
+      }),
+  ).singleton(),
 
   priceController: asClass(PriceController).singleton(),
 

@@ -20,7 +20,7 @@ interface CoinMarketCapApiItem {
 }
 
 interface CoinMarketCapApiResponse {
-  data: CoinMarketCapApiItem[];
+  data: Record<string, CoinMarketCapApiItem>;
 }
 
 export class CoinMarketCapHttpService implements ICoinMarketCapService {
@@ -54,8 +54,16 @@ export class CoinMarketCapHttpService implements ICoinMarketCapService {
     }
 
     const normalizedTickers = [
-      ...new Set(tickers.map((ticker) => ticker.trim().toUpperCase())),
+      ...new Set(
+        tickers
+          .map((ticker) => ticker.trim().toUpperCase())
+          .filter((ticker) => ticker.length > 0),
+      ),
     ];
+
+    if (normalizedTickers.length === 0) {
+      return [];
+    }
 
     const maxAttempts = 3;
     let currentDelay = 500;
@@ -77,7 +85,7 @@ export class CoinMarketCapHttpService implements ICoinMarketCapService {
           },
         );
 
-        return response.data.data.map((item) => ({
+        return Object.values(response.data.data).map((item) => ({
           symbol: item.symbol,
           price: String(item.quote.USD.price),
         }));
