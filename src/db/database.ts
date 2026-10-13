@@ -11,5 +11,9 @@ export function createDatabase(dbPath: string): DatabaseSync {
     }
   }
 
-  return new DatabaseSync(dbPath);
+  const db = new DatabaseSync(dbPath);
+
+  db.exec("PRAGMA foreign_keys = ON;");
+
+  return db;
 }

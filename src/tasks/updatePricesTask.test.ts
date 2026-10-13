@@ -2,13 +2,13 @@ import { describe, it, expect, beforeEach, jest } from "@jest/globals";
 import { UpdatePricesTask } from "./updatePricesTask";
 import { ICurrencyRepository } from "../currencies/currency.types";
 import { IPriceRepository } from "../price/price.types";
-import { IBinanceService } from "../price/binance.types";
+import { ICoinMarketCapService } from "../price/coinMarketCap.types";
 import { ILogger } from "../utils/logger";
 
 describe("UpdatePricesTask (Unit)", () => {
   let mockCurrencyRepository: jest.Mocked<ICurrencyRepository>;
   let mockPriceRepository: jest.Mocked<IPriceRepository>;
-  let mockBinanceService: jest.Mocked<IBinanceService>;
+  let mockCoinMarketCapService: jest.Mocked<ICoinMarketCapService>;
   let mockLogger: jest.Mocked<ILogger>;
   let task: UpdatePricesTask;
 
@@ -20,16 +20,19 @@ describe("UpdatePricesTask (Unit)", () => {
       create: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
-    } as unknown as jest.Mocked<ICurrencyRepository>;
+      findTracked: jest.fn(),
+      setTracked: jest.fn(),
+    };
 
     mockPriceRepository = {
-      savePrices: jest.fn(),
-      getPricesByTicker: jest.fn(),
-    } as unknown as jest.Mocked<IPriceRepository>;
+      savePrice: jest.fn(),
+      getLatestPrice: jest.fn(),
+      getHistoryByTicker: jest.fn(),
+    };
 
-    mockBinanceService = {
-      getAllPrices: jest.fn(),
-    } as unknown as jest.Mocked<IBinanceService>;
+    mockCoinMarketCapService = {
+      getPrices: jest.fn(),
+    };
 
     mockLogger = {
       trace: jest.fn(),
@@ -37,104 +40,176 @@ describe("UpdatePricesTask (Unit)", () => {
       info: jest.fn(),
       warn: jest.fn(),
       error: jest.fn(),
-    } as unknown as jest.Mocked<ILogger>;
+    };
 
     task = new UpdatePricesTask({
       currencyRepository: mockCurrencyRepository,
       priceRepository: mockPriceRepository,
-      binanceService: mockBinanceService,
+      coinMarketCapService: mockCoinMarketCapService,
       logger: mockLogger,
     });
   });
 
-  it("должен получить цены из Binance и сохранить их для каждой валюты", async () => {
+  it("должен получить цены из CoinMarketCap и сохранить их для отслеживаемых криптовалют", async () => {
     const mockCurrencies = [
-      { id: "1", name: "Bitcoin", ticker: "BTC" },
-      { id: "2", name: "Ethereum", ticker: "ETH" },
+      {
+        id: "1",
+        name: "Bitcoin",
+        ticker: "BTC",
+        isTracked: true,
+        lastUpdated: null,
+      },
+      {
+        id: "2",
+        name: "Ethereum",
+        ticker: "ETH",
+        isTracked: true,
+        lastUpdated: null,
+      },
     ];
-    mockCurrencyRepository.findAll.mockReturnValue(mockCurrencies);
 
-    const mockBinancePrices = [
-      { symbol: "BTCUSDT", price: "60000.00" },
-      { symbol: "BTCEUR", price: "55000.00" },
-      { symbol: "ETHUSDT", price: "3000.00" },
-      { symbol: "SOLUSDT", price: "150.00" },
-    ];
-    mockBinanceService.getAllPrices.mockResolvedValue(mockBinancePrices);
+    mockCurrencyRepository.findTracked.mockReturnValue(mockCurrencies);
+
+    mockCoinMarketCapService.getPrices.mockResolvedValue([
+      {
+        symbol: "BTC",
+        price: "60000.00",
+      },
+      {
+        symbol: "ETH",
+        price: "3000.00",
+      },
+    ]);
 
     await task.execute();
 
-    expect(mockCurrencyRepository.findAll).toHaveBeenCalledTimes(1);
-    expect(mockBinanceService.getAllPrices).toHaveBeenCalledTimes(1);
+    expect(mockCurrencyRepository.findTracked).toHaveBeenCalledTimes(1);
 
-    expect(mockPriceRepository.savePrices).toHaveBeenCalledWith("1", [
-      { symbol: "BTCUSDT", price: "60000.00" },
-      { symbol: "BTCEUR", price: "55000.00" },
+    expect(mockCoinMarketCapService.getPrices).toHaveBeenCalledTimes(1);
+
+    expect(mockCoinMarketCapService.getPrices).toHaveBeenCalledWith([
+      "BTC",
+      "ETH",
     ]);
 
-    expect(mockPriceRepository.savePrices).toHaveBeenCalledWith("2", [
-      { symbol: "ETHUSDT", price: "3000.00" },
-    ]);
+    expect(mockPriceRepository.savePrice).toHaveBeenCalledTimes(2);
+
+    expect(mockPriceRepository.savePrice).toHaveBeenNthCalledWith(
+      1,
+      "1",
+      "60000.00",
+      expect.any(String),
+    );
+
+    expect(mockPriceRepository.savePrice).toHaveBeenNthCalledWith(
+      2,
+      "2",
+      "3000.00",
+      expect.any(String),
+    );
+
+    expect(mockCurrencyRepository.setTracked).toHaveBeenCalledTimes(2);
+
+    expect(mockCurrencyRepository.setTracked).toHaveBeenNthCalledWith(
+      1,
+      "1",
+      true,
+      expect.any(String),
+    );
+
+    expect(mockCurrencyRepository.setTracked).toHaveBeenNthCalledWith(
+      2,
+      "2",
+      true,
+      expect.any(String),
+    );
   });
 
   it("должен логировать успешное завершение задачи", async () => {
-    mockCurrencyRepository.findAll.mockReturnValue([
-      { id: "1", name: "Bitcoin", ticker: "BTC" },
+    mockCurrencyRepository.findTracked.mockReturnValue([
+      {
+        id: "1",
+        name: "Bitcoin",
+        ticker: "BTC",
+        isTracked: true,
+        lastUpdated: null,
+      },
     ]);
-    mockBinanceService.getAllPrices.mockResolvedValue([
-      { symbol: "BTCUSDT", price: "60000.00" },
+
+    mockCoinMarketCapService.getPrices.mockResolvedValue([
+      {
+        symbol: "BTC",
+        price: "60000.00",
+      },
     ]);
 
     await task.execute();
 
     expect(mockLogger.info).toHaveBeenCalledWith(
       expect.stringContaining(
-        "Фоновое обновление курсов валют успешно завершено",
+        "Фоновое обновление курсов криптовалют успешно завершено",
       ),
     );
   });
 
-  it("должен залогировать предупреждение и не вызывать Binance если список валют пуст", async () => {
-    mockCurrencyRepository.findAll.mockReturnValue([]);
+  it("должен залогировать предупреждение и не вызывать CoinMarketCap, если список отслеживаемых криптовалют пуст", async () => {
+    mockCurrencyRepository.findTracked.mockReturnValue([]);
 
     await task.execute();
 
     expect(mockLogger.warn).toHaveBeenCalledWith(
-      expect.stringContaining("Локальный реестр разрешенных валют пуст"),
+      expect.stringContaining("Нет отслеживаемых криптовалют"),
     );
 
-    expect(mockBinanceService.getAllPrices).not.toHaveBeenCalled();
-    expect(mockPriceRepository.savePrices).not.toHaveBeenCalled();
+    expect(mockCoinMarketCapService.getPrices).not.toHaveBeenCalled();
+
+    expect(mockPriceRepository.savePrice).not.toHaveBeenCalled();
   });
 
-  it("должен пробросить ошибку наверх если Binance недоступен", async () => {
-    mockCurrencyRepository.findAll.mockReturnValue([
-      { id: "1", name: "Bitcoin", ticker: "BTC" },
+  it("должен пробросить ошибку наверх, если CoinMarketCap недоступен", async () => {
+    mockCurrencyRepository.findTracked.mockReturnValue([
+      {
+        id: "1",
+        name: "Bitcoin",
+        ticker: "BTC",
+        isTracked: true,
+        lastUpdated: null,
+      },
     ]);
 
-    const binanceError = new Error("Network timeout on api.binance.com");
-    mockBinanceService.getAllPrices.mockRejectedValue(binanceError);
+    const apiError = new Error("CoinMarketCap API timeout");
 
-    await expect(task.execute()).rejects.toThrow(
-      "Network timeout on api.binance.com",
-    );
+    mockCoinMarketCapService.getPrices.mockRejectedValue(apiError);
+
+    await expect(task.execute()).rejects.toThrow("CoinMarketCap API timeout");
 
     expect(mockLogger.error).toHaveBeenCalledWith(
-      expect.stringContaining("Сбой при фоновом обновлении курсов валют"),
+      expect.stringContaining("Сбой при фоновом обновлении курсов криптовалют"),
       expect.any(Object),
     );
   });
 
-  it("должен пробросить ошибку если priceRepository.savePrices выбросил ошибку", async () => {
-    mockCurrencyRepository.findAll.mockReturnValue([
-      { id: "1", name: "Bitcoin", ticker: "BTC" },
+  it("должен пробросить ошибку, если сохранение цены в БД завершилось ошибкой", async () => {
+    mockCurrencyRepository.findTracked.mockReturnValue([
+      {
+        id: "1",
+        name: "Bitcoin",
+        ticker: "BTC",
+        isTracked: true,
+        lastUpdated: null,
+      },
     ]);
-    mockBinanceService.getAllPrices.mockResolvedValue([
-      { symbol: "BTCUSDT", price: "60000.00" },
+
+    mockCoinMarketCapService.getPrices.mockResolvedValue([
+      {
+        symbol: "BTC",
+        price: "60000.00",
+      },
     ]);
 
     const dbError = new Error("SQLite disk image is malformed");
-    mockPriceRepository.savePrices.mockImplementation(() => {
+
+    mockPriceRepository.savePrice.mockImplementation(() => {
       throw dbError;
     });
 
@@ -143,28 +218,39 @@ describe("UpdatePricesTask (Unit)", () => {
     );
 
     expect(mockLogger.error).toHaveBeenCalledWith(
-      expect.stringContaining("Сбой при фоновом обновлении курсов валют"),
+      expect.stringContaining("Сбой при фоновом обновлении курсов криптовалют"),
       expect.any(Object),
     );
   });
 
-  it("должен логировать предупреждение если для тикера не найдено пар на Binance", async () => {
-    mockCurrencyRepository.findAll.mockReturnValue([
-      { id: "1", name: "Rare Coin", ticker: "MYCOIN" },
+  it("должен залогировать предупреждение, если CoinMarketCap не вернул цену для криптовалюты", async () => {
+    mockCurrencyRepository.findTracked.mockReturnValue([
+      {
+        id: "1",
+        name: "Rare Coin",
+        ticker: "MYCOIN",
+        isTracked: true,
+        lastUpdated: null,
+      },
     ]);
 
-    mockBinanceService.getAllPrices.mockResolvedValue([
-      { symbol: "BTCUSDT", price: "60000.00" },
+    mockCoinMarketCapService.getPrices.mockResolvedValue([
+      {
+        symbol: "BTC",
+        price: "60000.00",
+      },
     ]);
 
     await task.execute();
 
     expect(mockLogger.warn).toHaveBeenCalledWith(
       expect.stringContaining(
-        "Для тикера MYCOIN не найдено активных торговых пар",
+        "CoinMarketCap не вернул цену для криптовалюты MYCOIN",
       ),
     );
 
-    expect(mockPriceRepository.savePrices).not.toHaveBeenCalled();
+    expect(mockPriceRepository.savePrice).not.toHaveBeenCalled();
+
+    expect(mockCurrencyRepository.setTracked).not.toHaveBeenCalled();
   });
 });

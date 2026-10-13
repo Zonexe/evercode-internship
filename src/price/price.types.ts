@@ -1,15 +1,14 @@
 export interface Price {
   id: string;
   currencyId: string;
-  symbol: string;
   price: string;
+  recordedAt: string;
 }
 
 export interface IPriceRepository {
-  savePrices(
-    currencyId: string,
-    prices: { symbol: string; price: string }[],
-  ): void;
+  savePrice(currencyId: string, price: string, recordedAt: string): void;
 
-  getPricesByTicker(ticker: string): Price[];
+  getLatestPrice(currencyId: string): Price | undefined;
+
+  getHistoryByTicker(ticker: string, limit?: number): Price[];
 }

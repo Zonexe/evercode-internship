@@ -8,7 +8,6 @@ import {
 import { Logger, ILogger, LogLevel } from "./utils/logger";
 import { Scheduler } from "./services/scheduler";
 import { App } from "./app";
-import { MyTask } from "./tasks/myTask";
 import { UpdatePricesTask } from "./tasks/updatePricesTask";
 import { createAuthMiddleware } from "./middlewares/authMiddleware";
 import { createErrorMiddleware } from "./middlewares/errorMiddleware";
@@ -23,29 +22,19 @@ import { ICurrencyRepository } from "./currencies/currency.types";
 import { CurrencyController } from "./currencies/currencyController";
 import { createCurrencyRouter } from "./currencies/currencyRouter";
 
-import { IBinanceService } from "./price/binance.types";
-import { BinanceHttpService } from "./price/binanceService";
+import { ICoinMarketCapService } from "./price/coinMarketCap.types";
+import { CoinMarketCapHttpService } from "./price/coinMarketCapService";
+
 import { PriceController } from "./price/priceController";
 import { createPriceRouter } from "./price/priceRouter";
 
 import { IPriceRepository } from "./price/price.types";
 import { SqlitePriceRepository } from "./price/sqlitePriceRepository";
 
-import { IAddressRepository } from "./addresses/address.types";
-import { SqliteAddressRepository } from "./addresses/sqliteAddressRepository";
-import { AddressController } from "./addresses/addressController";
-import { createAddressRouter } from "./addresses/addressRouter";
-
-import { IBlockcypherService } from "./blockchain/blockcypher.types";
-import { BlockcypherService } from "./blockchain/blockcypherService";
-import { BlockchainController } from "./blockchain/blockchainController";
-import { createBlockchainRouter } from "./blockchain/blockchainRouter";
-
 export interface AppCradle {
   config: typeof config;
   logger: ILogger;
   scheduler: Scheduler;
-  myTask: MyTask;
   updatePricesTask: UpdatePricesTask;
   authMiddleware: RequestHandler;
 
@@ -57,17 +46,9 @@ export interface AppCradle {
 
   priceRepository: IPriceRepository;
 
-  binanceService: IBinanceService;
+  coinMarketCapService: ICoinMarketCapService;
   priceController: PriceController;
   priceRouter: Router;
-
-  addressRepository: IAddressRepository;
-  addressController: AddressController;
-  addressRouter: Router;
-
-  blockcypherService: IBlockcypherService;
-  blockchainController: BlockchainController;
-  blockchainRouter: Router;
 
   errorMiddleware: ErrorRequestHandler;
 
@@ -91,29 +72,32 @@ container.register({
   database: asFunction((c) => createDatabase(c.config.dbPath)).singleton(),
 
   scheduler: asFunction((c) => new Scheduler(c.logger)).singleton(),
-  myTask: asClass(MyTask).singleton(),
+
   updatePricesTask: asClass(UpdatePricesTask).singleton(),
+
   authMiddleware: asFunction((c) =>
     createAuthMiddleware(c.config.apiToken),
   ).singleton(),
 
   currencyRepository: asClass(SqliteCurrencyRepository).singleton(),
+
   currencyController: asClass(CurrencyController).singleton(),
+
   currencyRouter: asFunction(createCurrencyRouter).singleton(),
 
   priceRepository: asClass(SqlitePriceRepository).singleton(),
 
-  binanceService: asClass(BinanceHttpService).singleton(),
+  coinMarketCapService: asFunction(
+    (c) =>
+      new CoinMarketCapHttpService({
+        logger: c.logger,
+        apiKey: c.config.coinMarketCapApiKey,
+      }),
+  ).singleton(),
+
   priceController: asClass(PriceController).singleton(),
+
   priceRouter: asFunction(createPriceRouter).singleton(),
-
-  addressRepository: asClass(SqliteAddressRepository).singleton(),
-  addressController: asClass(AddressController).singleton(),
-  addressRouter: asFunction(createAddressRouter).singleton(),
-
-  blockcypherService: asClass(BlockcypherService).singleton(),
-  blockchainController: asClass(BlockchainController).singleton(),
-  blockchainRouter: asFunction(createBlockchainRouter).singleton(),
 
   errorMiddleware: asFunction((c) =>
     createErrorMiddleware(c.logger),

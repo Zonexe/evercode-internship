@@ -13,25 +13,24 @@ function initDb(): void {
       CREATE TABLE IF NOT EXISTS currencies (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
-        ticker TEXT NOT NULL UNIQUE
+        ticker TEXT NOT NULL UNIQUE,
+        is_tracked INTEGER NOT NULL DEFAULT 0,
+        last_updated TEXT
       );
 
-      CREATE TABLE IF NOT EXISTS prices (
+      CREATE TABLE IF NOT EXISTS price_history (
         id TEXT PRIMARY KEY,
         currency_id TEXT NOT NULL,
-        symbol TEXT NOT NULL UNIQUE, -- уникальный символ, чтобы работал механизм UPSERT
         price TEXT NOT NULL,
+        recorded_at TEXT NOT NULL,
         FOREIGN KEY(currency_id) REFERENCES currencies(id) ON DELETE CASCADE
       );
 
-      CREATE TABLE IF NOT EXISTS addresses (
-        id TEXT PRIMARY KEY,
-        address TEXT NOT NULL UNIQUE,
-        label TEXT NOT NULL,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL  
-      );
+      CREATE INDEX IF NOT EXISTS idx_price_history_currency_id
+        ON price_history(currency_id);
 
+      CREATE INDEX IF NOT EXISTS idx_price_history_recorded_at
+        ON price_history(recorded_at);
     `);
 
     console.log(

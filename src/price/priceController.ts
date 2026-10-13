@@ -34,23 +34,56 @@ export class PriceController {
     }
 
     const ticker = currency.toUpperCase().trim();
-
     const existingCurrency = this.currencyRepository.findByTicker(ticker);
+
     if (!existingCurrency) {
       res.status(404).json({
-        error: `Валюта с тикером "${ticker}" отсутствует в реестре разрешенных валют нашего приложения`,
+        error: `Валюта с тикером "${ticker}" отсутствует в реестре разрешенных криптовалют приложения`,
       });
       return;
     }
 
-    this.logger.debug(`Запрос курсов для валюты ${ticker} из БД`);
-
-    const cachedPrices = this.priceRepository.getPricesByTicker(ticker);
+    this.logger.debug(`Запрос истории цен для криптовалюты ${ticker} из БД`);
+    const priceHistory = this.priceRepository.getHistoryByTicker(ticker);
 
     this.logger.info(
-      `Для тикера "${ticker}" успешно найдено торговых пар на Binance: ${cachedPrices.length}`,
+      `Для тикера "${ticker}" найдено записей истории цен: ${priceHistory.length}`,
+    );
+    res.json(priceHistory);
+  };
+
+  public getLatest = async (req: Request, res: Response): Promise<void> => {
+    const { currency } = req.query;
+
+    if (!currency || typeof currency !== "string" || currency.trim() === "") {
+      res.status(400).json({
+        error:
+          "Поле 'currency' обязательно для передачи в query-параметрах и должно быть непустой строкой",
+      });
+      return;
+    }
+
+    const ticker = currency.toUpperCase().trim();
+    const existingCurrency = this.currencyRepository.findByTicker(ticker);
+
+    if (!existingCurrency) {
+      res.status(404).json({
+        error: `Валюта с тикером "${ticker}" отсутствует в реестре разрешенных криптовалют приложения`,
+      });
+      return;
+    }
+
+    const latestPrice = this.priceRepository.getLatestPrice(
+      existingCurrency.id,
     );
 
-    res.json(cachedPrices);
+    if (!latestPrice) {
+      res.status(404).json({
+        error: `Для валюты "${ticker}" пока нет сохраненных цен. Дождитесь выполнения фоновой синхронизации.`,
+      });
+      return;
+    }
+
+    res.json(latestPrice);
   };
 }

@@ -7,7 +7,9 @@ export function createPriceRouter({
   priceController: PriceController;
 }): Router {
   const router = express.Router();
+
   router.get("/", priceController.getPrice);
+  router.get("/latest", priceController.getLatest);
 
   return router;
 }

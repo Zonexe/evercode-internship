@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Evercode Internship Currency API
-  description: API для управления списком валют, отслеживаемыми биткоин-адресами и демонстрации работы архитектурных слоев Express + Awilix.
+  description: API для отслеживания и агрегации цен криптовалют с использованием CoinMarketCap API.
   version: 1.0.0
 
 servers:
@@ -26,28 +26,10 @@ paths:
                 type: string
                 example: ok
 
-  /protected-route:
-    get:
-      summary: Демонстрация защищенного роута
-      description: Требует валидный Bearer токен в заголовках.
-      responses:
-        "200":
-          description: Успешный доступ к секретным данным
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data:
-                    type: string
-                    example: secret data
-        "403":
-          $ref: "#/components/responses/403Forbidden"
-
   /currencies:
     get:
       summary: Получить список всех валют
-      description: Возвращает массив всех валют, хранящихся в оперативной памяти.
+      description: Возвращает массив всех отслеживаемых и неотслеживаемых валют.
       responses:
         "200":
           description: Список успешно получен
@@ -134,7 +116,7 @@ paths:
         "404":
           $ref: "#/components/responses/404NotFound"
         "409":
-          description: Конфликт — измененный тикер уже занят другой валютой
+          description: Конфликт — измененный тикер уже занят
           content:
             application/json:
               schema:
@@ -144,7 +126,7 @@ paths:
       summary: Удалить валюту по её ID
       responses:
         "204":
-          description: Валюта успешно удалена, тело ответа отсутствует
+          description: Валюта успешно удалена
         "403":
           $ref: "#/components/responses/403Forbidden"
         "404":
@@ -152,8 +134,8 @@ paths:
 
   /price:
     get:
-      summary: Получить курсы торговых пар валюты с Binance
-      description: Ищет валюту в реестре приложения по тикеру и запрашивает все соответствующие курсы с Binance API. Доступно только авторизованным пользователям.
+      summary: Получить историю цен валюты
+      description: Возвращает исторические записи цен для валюты (из SQLite).
       parameters:
         - name: currency
           in: query
@@ -164,194 +146,45 @@ paths:
             example: BTC
       responses:
         "200":
-          description: Успешное получение списка отфильтрованных курсов
+          description: Успешное получение истории
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  type: object
-                  required:
-                    - symbol
-                    - price
-                  properties:
-                    symbol:
-                      type: string
-                      example: BTCUSDT
-                    price:
-                      type: string
-                      example: "96450.12000000"
+                  $ref: "#/components/schemas/PriceRecord"
         "400":
           $ref: "#/components/responses/400BadRequest"
         "403":
           $ref: "#/components/responses/403Forbidden"
         "404":
           $ref: "#/components/responses/404NotFound"
-        "502":
-          description: Ошибка внешнего шлюза (Binance недоступен после ретраев)
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
 
-  /addresses:
+  /price/latest:
     get:
-      summary: Получить список всех отслеживаемых адресов
-      description: Возвращает список всех крипто-кошельков, сохраненных в нашей локальной СУБД SQLite.
+      summary: Получить самую актуальную цену валюты
+      description: Возвращает самую последнюю синхронизированную из CoinMarketCap цену (сохраненную в БД).
+      parameters:
+        - name: currency
+          in: query
+          required: true
+          description: Тикер запрашиваемой валюты (например, BTC)
+          schema:
+            type: string
+            example: BTC
       responses:
         "200":
-          description: Список адресов успешно получен
+          description: Успешное получение текущей цены
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Address"
-        "403":
-          $ref: "#/components/responses/403Forbidden"
-
-    post:
-      summary: Добавить крипто-адрес в список отслеживания
-      description: Сохраняет новый адрес Биткоина в SQLite СУБД с метаданными.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CreateAddressDto"
-      responses:
-        "201":
-          description: Адрес успешно сохранен в БД
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Address"
-        "400":
-          $ref: "#/components/responses/400BadRequest"
-        "403":
-          $ref: "#/components/responses/403Forbidden"
-        "409":
-          description: Конфликт — этот Биткоин-адрес уже отслеживается в базе
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-
-  /addresses/{id}:
-    parameters:
-      - name: id
-        in: path
-        required: true
-        description: Уникальный UUID записи адреса
-        schema:
-          type: string
-          format: uuid
-
-    get:
-      summary: Получить отслеживаемый адрес по его ID
-      responses:
-        "200":
-          description: Адрес успешно найден
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Address"
-        "403":
-          $ref: "#/components/responses/403Forbidden"
-        "404":
-          $ref: "#/components/responses/404NotFound"
-
-    put:
-      summary: Обновить параметры отслеживаемого адреса
-      description: Позволяет изменить Биткоин-адрес или его ярлык (label).
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/UpdateAddressDto"
-      responses:
-        "200":
-          description: Адрес успешно обновлен
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Address"
+                $ref: "#/components/schemas/PriceRecord"
         "400":
           $ref: "#/components/responses/400BadRequest"
         "403":
           $ref: "#/components/responses/403Forbidden"
         "404":
-          $ref: "#/components/responses/404NotFound"
-        "409":
-          description: Конфликт — данный Биткоин-адрес уже занят другой записью
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-
-    delete:
-      summary: Удалить адрес из списка отслеживания по его ID
-      responses:
-        "204":
-          description: Адрес успешно удален
-        "403":
-          $ref: "#/components/responses/403Forbidden"
-        "404":
-          $ref: "#/components/responses/404NotFound"
-
-  /addresses/{address}/balance:
-    parameters:
-      - name: address
-        in: path
-        required: true
-        description: Криптографический Биткоин-адрес в формате Base58 или Bech32
-        schema:
-          type: string
-          example: 1DEP8i3QJCsomS4BSMY2RpU1upv62aGvhD
-
-    get:
-      summary: Получить живой баланс адреса в реальном времени напрямую из сети
-      description: Запрашивает баланс с помощью Blockcypher API. Данные не сохраняются в СУБД SQLite.
-      responses:
-        "200":
-          description: Баланс успешно получен. Все суммы возвращены в сатоши.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AddressBalance"
-        "403":
-          $ref: "#/components/responses/403Forbidden"
-        "404":
-          $ref: "#/components/responses/404NotFound"
-        "502":
-          description: Ошибка внешнего провайдера (сервис Blockcypher недоступен после ретраев)
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-
-  /blockchain/height:
-    get:
-      summary: Получить текущую высоту сети Биткоина
-      description: Запрашивает номер последнего смайненного блока напрямую у Blockcypher API.
-      responses:
-        "200":
-          description: Высота сети успешно получена
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                  - height
-                properties:
-                  height:
-                    type: integer
-                    example: 850000
-        "403":
-          $ref: "#/components/responses/403Forbidden"
-        "502":
-          description: Ошибка внешнего провайдера (сервис Blockcypher недоступен после ретраев)
+          description: Валюта не найдена или данных о цене еще нет
           content:
             application/json:
               schema:
@@ -371,17 +204,24 @@ components:
         - id
         - name
         - ticker
+        - isTracked
       properties:
         id:
           type: string
           format: uuid
-          example: d3b07384-d113-4956-a5d2-aa1e030c2533
         name:
           type: string
           example: United States Dollar
         ticker:
           type: string
           example: USD
+        isTracked:
+          type: boolean
+          example: true
+        lastUpdated:
+          type: string
+          format: date-time
+          nullable: true
 
     CreateCurrencyDto:
       type: object
@@ -401,116 +241,46 @@ components:
       properties:
         name:
           type: string
-          example: Euro Classic
         ticker:
           type: string
-          example: EURC
 
-    Address:
+    PriceRecord:
       type: object
-      required:
-        - id
-        - address
-        - label
-        - createdAt
-        - updatedAt
       properties:
         id:
           type: string
           format: uuid
-          example: 9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d
-        address:
+        currencyId:
           type: string
-          example: 1DEP8i3QJCsomS4BSMY2RpU1upv62aGvhD
-        label:
+          format: uuid
+        price:
           type: string
-          example: Мой холодный кошелек
-        createdAt:
-          type: string
-          format: date-time
-          example: "2026-06-16T14:44:00.000Z"
-        updatedAt:
+          example: "65000.50"
+        recordedAt:
           type: string
           format: date-time
-          example: "2026-06-16T14:44:00.000Z"
-
-    CreateAddressDto:
-      type: object
-      required:
-        - address
-        - label
-      properties:
-        address:
-          type: string
-          example: 1DEP8i3QJCsomS4BSMY2RpU1upv62aGvhD
-        label:
-          type: string
-          example: Мой холодный кошелек
-
-    UpdateAddressDto:
-      type: object
-      properties:
-        address:
-          type: string
-          example: 1DEP8i3QJCsomS4BSMY2RpU1upv62aGvhD
-        label:
-          type: string
-          example: Новый ярлык кошелька
-
-    AddressBalance:
-      type: object
-      required:
-        - address
-        - balance
-        - finalBalance
-        - totalReceived
-        - totalSent
-      properties:
-        address:
-          type: string
-          example: 1DEP8i3QJCsomS4BSMY2RpU1upv62aGvhD
-        balance:
-          type: integer
-          description: Подтвержденный баланс в сатоши
-          example: 4433416
-        finalBalance:
-          type: integer
-          description: Суммарный подтвержденный + неподтвержденный баланс в сатоши
-          example: 4433416
-        totalReceived:
-          type: integer
-          description: Общая полученная сумма за всё время в сатоши
-          example: 4433416
-        totalSent:
-          type: integer
-          description: Общая отправленная сумма за всё время в сатоши
-          example: 0
 
     ErrorResponse:
       type: object
       properties:
         error:
           type: string
-          example: Описание возникшей ошибки
 
   responses:
     400BadRequest:
-      description: Невалидные входящие данные (ошибка на стороне клиента)
+      description: Невалидные входящие данные
       content:
         application/json:
           schema:
             $ref: "#/components/schemas/ErrorResponse"
-
     403Forbidden:
-      description: Ошибка авторизации (неверный или отсутствующий токен)
+      description: Ошибка авторизации
       content:
-        text/plain:
+        application/json:
           schema:
-            type: string
-            example: "Forbidden: Missing Authorization header"
-
+            $ref: "#/components/schemas/ErrorResponse"
     404NotFound:
-      description: Запрашиваемый ресурс не найден
+      description: Ресурс не найден
       content:
         application/json:
           schema:
