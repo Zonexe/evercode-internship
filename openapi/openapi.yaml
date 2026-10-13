@@ -29,7 +29,7 @@ paths:
   /currencies:
     get:
       summary: Получить список всех валют
-      description: Возвращает массив всех отслеживаемых и неотслеживаемых валют.
+      description: Возвращает массив всех валют в реестре.
       responses:
         "200":
           description: Список успешно получен
@@ -44,7 +44,7 @@ paths:
 
     post:
       summary: Создать новую валюту
-      description: Добавляет новую валюту в систему. Тикер автоматически переводится в верхний регистр.
+      description: Добавляет новую валюту в систему (по умолчанию isTracked = false).
       requestBody:
         required: true
         content:
@@ -127,6 +127,54 @@ paths:
       responses:
         "204":
           description: Валюта успешно удалена
+        "403":
+          $ref: "#/components/responses/403Forbidden"
+        "404":
+          $ref: "#/components/responses/404NotFound"
+
+  /currencies/{id}/track:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: Уникальный UUID валюты
+        schema:
+          type: string
+          format: uuid
+    post:
+      summary: Включить отслеживание котировок валюты
+      description: Помечает валюту как отслеживаемую (isTracked = true), после чего фоновый планировщик начинает обновлять для нее цены с CoinMarketCap.
+      responses:
+        "200":
+          description: Отслеживание успешно включено
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Currency"
+        "403":
+          $ref: "#/components/responses/403Forbidden"
+        "404":
+          $ref: "#/components/responses/404NotFound"
+
+  /currencies/{id}/untrack:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: Уникальный UUID валюты
+        schema:
+          type: string
+          format: uuid
+    post:
+      summary: Отключить отслеживание котировок валюты
+      description: Снимает флаг отслеживания (isTracked = false).
+      responses:
+        "200":
+          description: Отслеживание успешно отключено
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Currency"
         "403":
           $ref: "#/components/responses/403Forbidden"
         "404":

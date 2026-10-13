@@ -146,4 +146,28 @@ export class CurrencyController {
 
     res.status(204).send();
   };
+
+  public track = (req: Request<{ id: string }>, res: Response): void => {
+    const { id } = req.params;
+    const updated = this.currencyRepository.setTracked(id, true);
+
+    if (!updated) {
+      res.status(404).json({ error: `Валюта с ID "${id}" не найдена` });
+      return;
+    }
+
+    res.json(updated);
+  };
+
+  public untrack = (req: Request<{ id: string }>, res: Response): void => {
+    const { id } = req.params;
+    const updated = this.currencyRepository.setTracked(id, false);
+
+    if (!updated) {
+      res.status(404).json({ error: `Валюта с ID "${id}" не найдена` });
+      return;
+    }
+
+    res.json(updated);
+  };
 }

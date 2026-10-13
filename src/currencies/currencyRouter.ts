@@ -14,5 +14,8 @@ export function createCurrencyRouter({
   router.put("/:id", currencyController.update);
   router.delete("/:id", currencyController.remove);
 
+  router.post("/:id/track", currencyController.track);
+  router.post("/:id/untrack", currencyController.untrack);
+
   return router;
 }
