@@ -233,4 +233,47 @@ describe("Currency API (Integration)", () => {
       expect(response.status).toBe(404);
     });
   });
+
+  describe("POST /currencies/:id/track и /untrack (Управление трекингом)", () => {
+    it("должен включить отслеживание валюты и вернуть 200 OK (Позитивный)", async () => {
+      const created = repository.create({ name: "Bitcoin", ticker: "BTC" });
+
+      const response = await request(appInstance.expressApp)
+        .post(`/currencies/${created.id}/track`)
+        .set("Authorization", `Bearer ${validToken}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.isTracked).toBe(true);
+      expect(repository.findById(created.id)?.isTracked).toBe(true);
+    });
+
+    it("должен вернуть 404, если пытаемся включить трекинг несуществующей валюты (Негативный)", async () => {
+      const response = await request(appInstance.expressApp)
+        .post("/currencies/non_existent_id/track")
+        .set("Authorization", `Bearer ${validToken}`);
+
+      expect(response.status).toBe(404);
+    });
+
+    it("должен отключить отслеживание валюты и вернуть 200 OK (Позитивный)", async () => {
+      const created = repository.create({ name: "Bitcoin", ticker: "BTC" });
+      repository.setTracked(created.id, true);
+
+      const response = await request(appInstance.expressApp)
+        .post(`/currencies/${created.id}/untrack`)
+        .set("Authorization", `Bearer ${validToken}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.isTracked).toBe(false);
+      expect(repository.findById(created.id)?.isTracked).toBe(false);
+    });
+
+    it("должен вернуть 404, если пытаемся отключить трекинг несуществующей валюты (Негативный)", async () => {
+      const response = await request(appInstance.expressApp)
+        .post("/currencies/non_existent_id/untrack")
+        .set("Authorization", `Bearer ${validToken}`);
+
+      expect(response.status).toBe(404);
+    });
+  });
 });
