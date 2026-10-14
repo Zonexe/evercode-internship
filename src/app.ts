@@ -88,10 +88,6 @@ export class App {
 
     this.expressApp.use(this.authMiddleware);
 
-    this.expressApp.get("/protected-route", (req: Request, res: Response) => {
-      res.json({ data: "secret data" });
-    });
-
     this.expressApp.use("/currencies", this.currencyRouter);
     this.expressApp.use("/price", this.priceRouter);
 

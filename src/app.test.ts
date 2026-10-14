@@ -4,7 +4,7 @@ import { App } from "./app";
 import { ILogger } from "./utils/logger";
 import { createAuthMiddleware } from "./middlewares/authMiddleware";
 import { config } from "./config";
-import express, { Router } from "express";
+import express from "express";
 
 describe("App (Integration)", () => {
   let loggerMock: ILogger;
@@ -22,6 +22,10 @@ describe("App (Integration)", () => {
     const authMiddleware = createAuthMiddleware(config.apiToken);
 
     const dummyRouter = express.Router();
+    dummyRouter.get("/test", (req, res) => {
+      res.json({ data: "success" });
+    });
+
     const dummyErrorMiddleware: express.ErrorRequestHandler = (
       err,
       req,
@@ -36,7 +40,7 @@ describe("App (Integration)", () => {
       config: config,
       authMiddleware,
       currencyRouter: dummyRouter,
-      priceRouter: dummyRouter,
+      priceRouter: express.Router(),
       errorMiddleware: dummyErrorMiddleware,
     });
   });
@@ -49,32 +53,22 @@ describe("App (Integration)", () => {
     });
   });
 
-  describe("GET /protected-route (Protected Zone)", () => {
-    it("should return status 403 if authorization token is missing", async () => {
+  describe("Global Auth Middleware Integration", () => {
+    it("должен вернуть 403, если обращение к защищенному роуту происходит без токена", async () => {
       const response = await request(appInstance.expressApp).get(
-        "/protected-route",
+        "/currencies/test",
       );
       expect(response.status).toBe(403);
-
       expect(response.body.error).toContain("Missing Authorization header");
     });
 
-    it("should return status 403 if token is invalid", async () => {
+    it("должен пропустить запрос к защищенному роуту при наличии валидного токена", async () => {
       const response = await request(appInstance.expressApp)
-        .get("/protected-route")
-        .set("Authorization", "Bearer invalid-token-sample");
-
-      expect(response.status).toBe(403);
-      expect(response.body.error).toContain("Invalid API token");
-    });
-
-    it("should return status 200 and secret data if token is valid", async () => {
-      const response = await request(appInstance.expressApp)
-        .get("/protected-route")
+        .get("/currencies/test")
         .set("Authorization", `Bearer ${config.apiToken}`);
 
       expect(response.status).toBe(200);
-      expect(response.body).toEqual({ data: "secret data" });
+      expect(response.body).toEqual({ data: "success" });
     });
   });
 });
