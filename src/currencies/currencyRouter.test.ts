@@ -1,17 +1,27 @@
 import express from "express";
-import { describe, it, expect, beforeEach, jest } from "@jest/globals";
+import { DatabaseSync } from "node:sqlite";
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  jest,
+} from "@jest/globals";
 import request from "supertest";
 import { App } from "../app";
 import { ILogger } from "../utils/logger";
 import { createAuthMiddleware } from "../middlewares/authMiddleware";
-import { InMemoryCurrencyRepository } from "./currencyRepository";
+import { createDatabase } from "../db/database";
+import { SqliteCurrencyRepository } from "./sqliteCurrencyRepository";
 import { CurrencyController } from "./currencyController";
 import { createCurrencyRouter } from "./currencyRouter";
 import { config } from "../config";
 
 describe("Currency API (Integration)", () => {
   let appInstance: App;
-  let repository: InMemoryCurrencyRepository;
+  let testDb: DatabaseSync;
+  let repository: SqliteCurrencyRepository;
   const validToken = config.apiToken;
 
   beforeEach(() => {
@@ -23,7 +33,8 @@ describe("Currency API (Integration)", () => {
       error: jest.fn(),
     };
 
-    repository = new InMemoryCurrencyRepository();
+    testDb = createDatabase(":memory:");
+    repository = new SqliteCurrencyRepository({ database: testDb });
 
     const currencyController = new CurrencyController({
       currencyRepository: repository,
@@ -48,6 +59,10 @@ describe("Currency API (Integration)", () => {
       priceRouter: express.Router(),
       errorMiddleware: dummyErrorMiddleware,
     });
+  });
+
+  afterEach(() => {
+    testDb.close();
   });
 
   describe("Проверка авторизации (Security)", () => {
@@ -124,7 +139,7 @@ describe("Currency API (Integration)", () => {
       expect(response.body).toEqual([]);
     });
 
-    it("должен вернуть список всех валют из репозитория", async () => {
+    it("должен вернуть список всех валют из репозитория, отсортированных по имени", async () => {
       repository.create({ name: "US Dollar", ticker: "USD" });
       repository.create({ name: "Euro", ticker: "EUR" });
 
@@ -134,8 +149,10 @@ describe("Currency API (Integration)", () => {
 
       expect(response.status).toBe(200);
       expect(response.body.length).toBe(2);
-      expect(response.body[0].ticker).toBe("USD");
-      expect(response.body[1].ticker).toBe("EUR");
+      expect(response.body[0].name).toBe("Euro");
+      expect(response.body[0].ticker).toBe("EUR");
+      expect(response.body[1].name).toBe("US Dollar");
+      expect(response.body[1].ticker).toBe("USD");
     });
   });
 
@@ -198,7 +215,7 @@ describe("Currency API (Integration)", () => {
     });
 
     it("должен вернуть 409 Conflict, если измененный тикер занят другой валютой", async () => {
-      const currency1 = repository.create({ name: "Bitcoin", ticker: "BTC" });
+      repository.create({ name: "Bitcoin", ticker: "BTC" });
       const currency2 = repository.create({ name: "Euro", ticker: "EUR" });
 
       const response = await request(appInstance.expressApp)

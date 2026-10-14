@@ -1,9 +1,18 @@
-import { describe, it, expect, beforeEach, jest } from "@jest/globals";
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  jest,
+} from "@jest/globals";
+import { DatabaseSync } from "node:sqlite";
 import request from "supertest";
 import express from "express";
 import { App } from "../app";
 import { ILogger } from "../utils/logger";
-import { InMemoryCurrencyRepository } from "../currencies/currencyRepository";
+import { createDatabase } from "../db/database";
+import { SqliteCurrencyRepository } from "../currencies/sqliteCurrencyRepository";
 import { PriceController } from "./priceController";
 import { createPriceRouter } from "./priceRouter";
 import { IPriceRepository, Price } from "./price.types";
@@ -12,7 +21,8 @@ import { config } from "../config";
 
 describe("Price API (Integration & Unit)", () => {
   let appInstance: App;
-  let repository: InMemoryCurrencyRepository;
+  let testDb: DatabaseSync;
+  let repository: SqliteCurrencyRepository;
   let mockPriceRepository: jest.Mocked<IPriceRepository>;
 
   const validToken = config.apiToken;
@@ -47,7 +57,8 @@ describe("Price API (Integration & Unit)", () => {
       error: jest.fn(),
     };
 
-    repository = new InMemoryCurrencyRepository();
+    testDb = createDatabase(":memory:");
+    repository = new SqliteCurrencyRepository({ database: testDb });
 
     mockPriceRepository = {
       savePrice: jest.fn(),
@@ -83,6 +94,10 @@ describe("Price API (Integration & Unit)", () => {
       priceRouter,
       errorMiddleware: dummyErrorMiddleware,
     });
+  });
+
+  afterEach(() => {
+    testDb.close();
   });
 
   describe("Проверка безопасности (Security)", () => {
@@ -215,7 +230,7 @@ describe("Price API (Integration & Unit)", () => {
     });
 
     it("должен вернуть 404, если цена для валюты еще не синхронизирована", async () => {
-      repository.create({ name: "Bitcoin", ticker: "BTC" });
+      const created = repository.create({ name: "Bitcoin", ticker: "BTC" });
       mockPriceRepository.getLatestPrice.mockReturnValue(undefined);
 
       const response = await request(appInstance.expressApp)
