@@ -129,6 +129,26 @@ describe("Price API (Integration & Unit)", () => {
 
       expect(response.status).toBe(400);
     });
+
+    it("должен вернуть 400 Bad Request, если параметр limit не является положительным числом", async () => {
+      repository.create({ name: "Bitcoin", ticker: "BTC" });
+
+      const responseNegative = await request(appInstance.expressApp)
+        .get("/price")
+        .set("Authorization", `Bearer ${validToken}`)
+        .query({ currency: "BTC", limit: "-5" });
+
+      expect(responseNegative.status).toBe(400);
+      expect(responseNegative.body.error).toContain("limit");
+
+      const responseNaN = await request(appInstance.expressApp)
+        .get("/price")
+        .set("Authorization", `Bearer ${validToken}`)
+        .query({ currency: "BTC", limit: "invalid" });
+
+      expect(responseNaN.status).toBe(400);
+      expect(responseNaN.body.error).toContain("limit");
+    });
   });
 
   describe("GET /price - Бизнес-логика (Business Logic)", () => {
@@ -162,9 +182,30 @@ describe("Price API (Integration & Unit)", () => {
       expect(response.body).toEqual(dummyPrices);
 
       expect(mockPriceRepository.getHistoryByTicker).toHaveBeenCalledTimes(1);
-
       expect(mockPriceRepository.getHistoryByTicker).toHaveBeenCalledWith(
         "BTC",
+        undefined,
+      );
+    });
+
+    it("должен корректно передавать валидный параметр limit в репозиторий", async () => {
+      repository.create({
+        name: "Bitcoin",
+        ticker: "BTC",
+      });
+
+      mockPriceRepository.getHistoryByTicker.mockReturnValue([dummyPrices[0]]);
+
+      const response = await request(appInstance.expressApp)
+        .get("/price")
+        .set("Authorization", `Bearer ${validToken}`)
+        .query({ currency: "BTC", limit: "1" });
+
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveLength(1);
+      expect(mockPriceRepository.getHistoryByTicker).toHaveBeenCalledWith(
+        "BTC",
+        1,
       );
     });
 
@@ -186,6 +227,7 @@ describe("Price API (Integration & Unit)", () => {
 
       expect(mockPriceRepository.getHistoryByTicker).toHaveBeenCalledWith(
         "MYCOIN",
+        undefined,
       );
     });
 

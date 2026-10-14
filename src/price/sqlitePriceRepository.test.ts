@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from "@jest/globals";
 import { DatabaseSync } from "node:sqlite";
+import { createDatabase } from "../db/database";
 import { SqlitePriceRepository } from "./sqlitePriceRepository";
 
 describe("SqlitePriceRepository (Integration)", () => {
@@ -7,27 +8,7 @@ describe("SqlitePriceRepository (Integration)", () => {
   let repository: SqlitePriceRepository;
 
   beforeEach(() => {
-    testDb = new DatabaseSync(":memory:");
-
-    testDb.exec(`
-      PRAGMA foreign_keys = ON;
-
-      CREATE TABLE currencies (
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        ticker TEXT NOT NULL UNIQUE,
-        is_tracked INTEGER NOT NULL DEFAULT 0,
-        last_updated TEXT
-      );
-
-      CREATE TABLE price_history (
-        id TEXT PRIMARY KEY,
-        currency_id TEXT NOT NULL,
-        price TEXT NOT NULL,
-        recorded_at TEXT NOT NULL,
-        FOREIGN KEY(currency_id) REFERENCES currencies(id) ON DELETE CASCADE
-      );
-    `);
+    testDb = createDatabase(":memory:");
 
     const insertCurrency = testDb.prepare(
       "INSERT INTO currencies (id, name, ticker) VALUES (?, ?, ?)",
