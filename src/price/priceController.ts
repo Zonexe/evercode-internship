@@ -23,7 +23,7 @@ export class PriceController {
   }
 
   public getPrice = async (req: Request, res: Response): Promise<void> => {
-    const { currency } = req.query;
+    const { currency, limit } = req.query;
 
     if (!currency || typeof currency !== "string" || currency.trim() === "") {
       res.status(400).json({
@@ -31,6 +31,28 @@ export class PriceController {
           "Поле 'currency' обязательно для передачи в query-параметрах и должно быть непустой строкой",
       });
       return;
+    }
+
+    let parsedLimit: number | undefined;
+
+    if (limit !== undefined) {
+      if (typeof limit !== "string" || limit.trim() === "") {
+        res.status(400).json({
+          error: "Параметр 'limit' должен быть положительным целым числом",
+        });
+        return;
+      }
+
+      const num = parseInt(limit.trim(), 10);
+
+      if (isNaN(num) || num <= 0 || !/^\d+$/.test(limit.trim())) {
+        res.status(400).json({
+          error: "Параметр 'limit' должен быть положительным целым числом",
+        });
+        return;
+      }
+
+      parsedLimit = num;
     }
 
     const ticker = currency.toUpperCase().trim();
@@ -43,8 +65,13 @@ export class PriceController {
       return;
     }
 
-    this.logger.debug(`Запрос истории цен для криптовалюты ${ticker} из БД`);
-    const priceHistory = this.priceRepository.getHistoryByTicker(ticker);
+    this.logger.debug(
+      `Запрос истории цен для криптовалюты ${ticker} из БД (limit: ${parsedLimit ?? "default"})`,
+    );
+    const priceHistory = this.priceRepository.getHistoryByTicker(
+      ticker,
+      parsedLimit,
+    );
 
     this.logger.info(
       `Для тикера "${ticker}" найдено записей истории цен: ${priceHistory.length}`,

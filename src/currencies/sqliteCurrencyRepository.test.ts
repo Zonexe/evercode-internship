@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from "@jest/globals";
 import { DatabaseSync } from "node:sqlite";
+import { createDatabase } from "../db/database";
 import { SqliteCurrencyRepository } from "./sqliteCurrencyRepository";
 
 describe("SqliteCurrencyRepository (Integration Tests)", () => {
@@ -7,20 +8,7 @@ describe("SqliteCurrencyRepository (Integration Tests)", () => {
   let repository: SqliteCurrencyRepository;
 
   beforeEach(() => {
-    testDb = new DatabaseSync(":memory:");
-
-    testDb.exec(`
-      PRAGMA foreign_keys = ON;
-
-      CREATE TABLE currencies (
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        ticker TEXT NOT NULL UNIQUE,
-        is_tracked INTEGER NOT NULL DEFAULT 0,
-        last_updated TEXT
-      );
-    `);
-
+    testDb = createDatabase(":memory:");
     repository = new SqliteCurrencyRepository({ database: testDb });
   });
 

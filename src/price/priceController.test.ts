@@ -1,9 +1,18 @@
-import { describe, it, expect, beforeEach, jest } from "@jest/globals";
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  jest,
+} from "@jest/globals";
+import { DatabaseSync } from "node:sqlite";
 import request from "supertest";
 import express from "express";
 import { App } from "../app";
 import { ILogger } from "../utils/logger";
-import { InMemoryCurrencyRepository } from "../currencies/currencyRepository";
+import { createDatabase } from "../db/database";
+import { SqliteCurrencyRepository } from "../currencies/sqliteCurrencyRepository";
 import { PriceController } from "./priceController";
 import { createPriceRouter } from "./priceRouter";
 import { IPriceRepository, Price } from "./price.types";
@@ -12,7 +21,8 @@ import { config } from "../config";
 
 describe("Price API (Integration & Unit)", () => {
   let appInstance: App;
-  let repository: InMemoryCurrencyRepository;
+  let testDb: DatabaseSync;
+  let repository: SqliteCurrencyRepository;
   let mockPriceRepository: jest.Mocked<IPriceRepository>;
 
   const validToken = config.apiToken;
@@ -47,7 +57,8 @@ describe("Price API (Integration & Unit)", () => {
       error: jest.fn(),
     };
 
-    repository = new InMemoryCurrencyRepository();
+    testDb = createDatabase(":memory:");
+    repository = new SqliteCurrencyRepository({ database: testDb });
 
     mockPriceRepository = {
       savePrice: jest.fn(),
@@ -85,6 +96,10 @@ describe("Price API (Integration & Unit)", () => {
     });
   });
 
+  afterEach(() => {
+    testDb.close();
+  });
+
   describe("Проверка безопасности (Security)", () => {
     it("должен вернуть 403 Forbidden, если отсутствует заголовок Authorization", async () => {
       const response = await request(appInstance.expressApp)
@@ -113,6 +128,26 @@ describe("Price API (Integration & Unit)", () => {
         .query({ currency: "   " });
 
       expect(response.status).toBe(400);
+    });
+
+    it("должен вернуть 400 Bad Request, если параметр limit не является положительным числом", async () => {
+      repository.create({ name: "Bitcoin", ticker: "BTC" });
+
+      const responseNegative = await request(appInstance.expressApp)
+        .get("/price")
+        .set("Authorization", `Bearer ${validToken}`)
+        .query({ currency: "BTC", limit: "-5" });
+
+      expect(responseNegative.status).toBe(400);
+      expect(responseNegative.body.error).toContain("limit");
+
+      const responseNaN = await request(appInstance.expressApp)
+        .get("/price")
+        .set("Authorization", `Bearer ${validToken}`)
+        .query({ currency: "BTC", limit: "invalid" });
+
+      expect(responseNaN.status).toBe(400);
+      expect(responseNaN.body.error).toContain("limit");
     });
   });
 
@@ -147,9 +182,30 @@ describe("Price API (Integration & Unit)", () => {
       expect(response.body).toEqual(dummyPrices);
 
       expect(mockPriceRepository.getHistoryByTicker).toHaveBeenCalledTimes(1);
-
       expect(mockPriceRepository.getHistoryByTicker).toHaveBeenCalledWith(
         "BTC",
+        undefined,
+      );
+    });
+
+    it("должен корректно передавать валидный параметр limit в репозиторий", async () => {
+      repository.create({
+        name: "Bitcoin",
+        ticker: "BTC",
+      });
+
+      mockPriceRepository.getHistoryByTicker.mockReturnValue([dummyPrices[0]]);
+
+      const response = await request(appInstance.expressApp)
+        .get("/price")
+        .set("Authorization", `Bearer ${validToken}`)
+        .query({ currency: "BTC", limit: "1" });
+
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveLength(1);
+      expect(mockPriceRepository.getHistoryByTicker).toHaveBeenCalledWith(
+        "BTC",
+        1,
       );
     });
 
@@ -171,6 +227,7 @@ describe("Price API (Integration & Unit)", () => {
 
       expect(mockPriceRepository.getHistoryByTicker).toHaveBeenCalledWith(
         "MYCOIN",
+        undefined,
       );
     });
 
@@ -215,7 +272,7 @@ describe("Price API (Integration & Unit)", () => {
     });
 
     it("должен вернуть 404, если цена для валюты еще не синхронизирована", async () => {
-      repository.create({ name: "Bitcoin", ticker: "BTC" });
+      const created = repository.create({ name: "Bitcoin", ticker: "BTC" });
       mockPriceRepository.getLatestPrice.mockReturnValue(undefined);
 
       const response = await request(appInstance.expressApp)

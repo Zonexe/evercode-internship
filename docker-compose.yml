@@ -8,6 +8,7 @@ services:
     environment:
       - PORT=3000
       - API_TOKEN=${API_TOKEN}
+      - COINMARKETCAP_API_KEY=${COINMARKETCAP_API_KEY}
       - DB_PATH=/app/data/currencies.db
 
     volumes:

@@ -180,7 +180,7 @@ paths:
         "404":
           $ref: "#/components/responses/404NotFound"
 
-  /price:
+/price:
     get:
       summary: Получить историю цен валюты
       description: Возвращает исторические записи цен для валюты (из SQLite).
@@ -192,6 +192,14 @@ paths:
           schema:
             type: string
             example: BTC
+        - name: limit
+          in: query
+          required: false
+          description: Максимальное количество записей в истории цен
+          schema:
+            type: integer
+            minimum: 1
+            example: 50
       responses:
         "200":
           description: Успешное получение истории

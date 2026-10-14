@@ -24,7 +24,7 @@ export class CurrencyController {
   public getById = (req: Request<{ id: string }>, res: Response): void => {
     const { id } = req.params;
 
-    if (!id || typeof id !== "string") {
+    if (!id || typeof id !== "string" || id.trim() === "") {
       res.status(400).json({ error: "Некорректный формат параметра id" });
       return;
     }
@@ -43,6 +43,13 @@ export class CurrencyController {
     req: Request<Record<string, never>, any, CreateCurrencyDto>,
     res: Response,
   ): void => {
+    if (!req.body || typeof req.body !== "object") {
+      res.status(400).json({
+        error: "Тело запроса обязательно и должно быть объектом",
+      });
+      return;
+    }
+
     const { name, ticker } = req.body;
 
     if (!name || typeof name !== "string" || name.trim() === "") {
@@ -80,13 +87,26 @@ export class CurrencyController {
     res: Response,
   ): void => {
     const { id } = req.params;
-    const { name, ticker } = req.body;
+
+    if (!id || typeof id !== "string" || id.trim() === "") {
+      res.status(400).json({ error: "Некорректный формат параметра id" });
+      return;
+    }
 
     const existing = this.currencyRepository.findById(id);
     if (!existing) {
       res.status(404).json({ error: `Валюта с ID "${id}" не найдена` });
       return;
     }
+
+    if (!req.body || typeof req.body !== "object") {
+      res.status(400).json({
+        error: "Тело запроса обязательно и должно быть объектом",
+      });
+      return;
+    }
+
+    const { name, ticker } = req.body;
 
     if (name === undefined && ticker === undefined) {
       res.status(400).json({
@@ -137,6 +157,11 @@ export class CurrencyController {
   public remove = (req: Request<{ id: string }>, res: Response): void => {
     const { id } = req.params;
 
+    if (!id || typeof id !== "string" || id.trim() === "") {
+      res.status(400).json({ error: "Некорректный формат параметра id" });
+      return;
+    }
+
     const isDeleted = this.currencyRepository.delete(id);
 
     if (!isDeleted) {
@@ -149,6 +174,12 @@ export class CurrencyController {
 
   public track = (req: Request<{ id: string }>, res: Response): void => {
     const { id } = req.params;
+
+    if (!id || typeof id !== "string" || id.trim() === "") {
+      res.status(400).json({ error: "Некорректный формат параметра id" });
+      return;
+    }
+
     const updated = this.currencyRepository.setTracked(id, true);
 
     if (!updated) {
@@ -161,6 +192,12 @@ export class CurrencyController {
 
   public untrack = (req: Request<{ id: string }>, res: Response): void => {
     const { id } = req.params;
+
+    if (!id || typeof id !== "string" || id.trim() === "") {
+      res.status(400).json({ error: "Некорректный формат параметра id" });
+      return;
+    }
+
     const updated = this.currencyRepository.setTracked(id, false);
 
     if (!updated) {
